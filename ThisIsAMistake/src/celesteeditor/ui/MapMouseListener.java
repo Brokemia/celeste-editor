@@ -58,7 +58,8 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 		}
 		
 		if(button3Down || (button1Down && panel.altPressed && !panel.draggingEntity)) {
-			panel.offset = new Point((int)(e.getPoint().x * panel.getActualZoom(-panel.getZoom()) - dragStart.x), (int)(e.getPoint().y * panel.getActualZoom(-panel.getZoom()) - dragStart.y));
+			if(dragStart != null)
+				panel.offset = new Point((int)(e.getPoint().x * panel.getActualZoom(-panel.getZoom()) - dragStart.x), (int)(e.getPoint().y * panel.getActualZoom(-panel.getZoom()) - dragStart.y));
 		} else if(Main.editingPanel.getCurrentPanel() == EditPanel.Tiles) {
 			placeTile(e.getPoint(), MouseAction.DRAGGED);
 		}

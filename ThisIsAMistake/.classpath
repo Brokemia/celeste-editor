@@ -7,12 +7,12 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="/home/ricky/eclipse-workspace/ThisIsAMistake/libs/commons-io-2.7.jar">
+	<classpathentry kind="lib" path="/home/ricky/git/celesteeditorthing/ThisIsAMistake/libs/commons-io-2.7.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="/home/ricky/eclipse-workspace/ThisIsAMistake/libs/commons-lang3-3.10.jar">
+	<classpathentry kind="lib" path="/home/ricky/git/celesteeditorthing/ThisIsAMistake/libs/commons-lang3-3.10.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
