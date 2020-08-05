@@ -164,7 +164,7 @@ public class TilesTab extends JPanel {
 				if(tileFile.exists()) {
 					tileFile.delete();
 				}
-				if(EditTiletypePopup.currentPopup.tileType.equals(tt)) {
+				if(EditTiletypePopup.currentPopup != null && tt.equals(EditTiletypePopup.currentPopup.tileType)) {
 					EditTiletypePopup.currentPopup.dispose();
 				}
 				revalidate();

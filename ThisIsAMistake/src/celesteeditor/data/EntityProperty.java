@@ -1,4 +1,4 @@
-package celesteeditor.util;
+package celesteeditor.data;
 
 public class EntityProperty {
 	
@@ -11,6 +11,14 @@ public class EntityProperty {
 	public PropertyType type = PropertyType.String;
 	
 	public Object value;
+	
+	public EntityProperty() {}
+	
+	public EntityProperty(String name, PropertyType type, Object val) {
+		this.name = name;
+		this.type = type;
+		value = val;
+	}
 	
 	public static Object convertFromString(String val, PropertyType type) {
 		switch(type) {

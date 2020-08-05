@@ -6,11 +6,11 @@ import java.util.ArrayList;
 import java.util.Map.Entry;
 
 import celesteeditor.BinaryPacker.Element;
+import celesteeditor.data.EntityProperty.PropertyType;
 import celesteeditor.editing.EntityConfig;
 import celesteeditor.editing.EntityConfig.VisualType;
+import celesteeditor.editing.PlacementConfig;
 import celesteeditor.Main;
-import celesteeditor.util.EntityProperty;
-import celesteeditor.util.EntityProperty.PropertyType;
 
 public class Entity implements ElementEncoded {
 	public String name;
@@ -18,6 +18,8 @@ public class Entity implements ElementEncoded {
 	public int x, y;
 	
 	public int originX, originY;
+	
+	public static int NEXT_ID;
 	
 	public int id;
 	
@@ -97,6 +99,9 @@ public class Entity implements ElementEncoded {
 		originX = element.AttrInt("originX");
 		originY = element.AttrInt("originY");
 		id = element.AttrInt("id");
+		if(id >= NEXT_ID) {
+			NEXT_ID = id + 1;
+		}
 		properties.clear();
 		for(Entry<String, Object> e : element.Attributes.entrySet()) {
 			if(!(e.getKey().equals("x") || e.getKey().equals("y") || e.getKey().equals("originX") || e.getKey().equals("originY") || e.getKey().equals("id"))) {
@@ -124,5 +129,16 @@ public class Entity implements ElementEncoded {
 		}
 		
 		return this;
+	}
+
+	public static Entity fromPlacementConfig(PlacementConfig config) {
+		Entity res = new Entity();
+		res.id = NEXT_ID;
+		NEXT_ID++;
+		res.name = config.name;
+		for(EntityProperty ep : config.defaultProperties) {
+			res.properties.add(new EntityProperty(ep.name, ep.type, ep.value));
+		}
+		return res;
 	}
 }

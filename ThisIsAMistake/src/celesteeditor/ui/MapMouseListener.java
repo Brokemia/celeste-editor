@@ -32,7 +32,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 
 	@Override
 	public void mouseDragged(MouseEvent e) {
-		if(button1Down && Main.editingPanel.getCurrentPanel() == EditPanel.Entities && panel.draggingEntity && (panel.selectedEntity != null || panel.selectedDecal != null)) {
+		if(button1Down && (Main.editingPanel.getCurrentPanel() == EditPanel.Entities || Main.editingPanel.getCurrentPanel() == EditPanel.Selection) && panel.draggingEntity && (panel.selectedEntity != null || panel.selectedDecal != null)) {
 			int newX = (int)(e.getPoint().x / panel.getActualZoom(panel.getZoom()) - dragStart.x);
 			int newY = (int)(e.getPoint().y / panel.getActualZoom(panel.getZoom()) - dragStart.y);
 			
@@ -84,7 +84,31 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 
 	@Override
 	public void mouseClicked(MouseEvent e) {
-		if(Main.editingPanel.getCurrentPanel() == EditPanel.Entities) {
+		if(Main.editingPanel.getCurrentPanel() == EditPanel.Entities && !Main.editingPanel.entities.entityList.isSelectionEmpty() && e.getButton() == MouseEvent.BUTTON1) {
+			for(Level level : Main.loadedMap.levels) {
+				Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
+				if(lBounds.contains(e.getPoint())) {
+					panel.selectedLevel = level;
+					panel.selectedEntity = null;
+					panel.selectedDecal = null;
+					panel.selectedNode = -1;
+					
+					Entity entity = Entity.fromPlacementConfig(EntitiesTab.placementConfig.get(Main.editingPanel.entities.entityList.getSelectedValue()));
+					Point coords = new Point((int)((e.getPoint().x -  lBounds.x) / panel.getActualZoom()), (int)((e.getPoint().y - lBounds.y) / panel.getActualZoom()));
+					// Snap to grid if not holding ctrl
+					if(!Main.mapPanel.ctrlPressed) {
+						coords.x /= 8;
+						coords.y /= 8;
+						coords.x *= 8;
+						coords.y *= 8;
+					}
+					entity.x = coords.x;
+					entity.y = coords.y;
+					panel.selectedLevel.entities.items.add(entity);
+					return;
+				}
+			}
+		} else if(Main.editingPanel.getCurrentPanel() == EditPanel.Entities || Main.editingPanel.getCurrentPanel() == EditPanel.Selection) {
 			Entity openPopupFor = null;
 			boolean done = false;
 			boolean isTrigger = false;
@@ -251,7 +275,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 		}
 
 		if(button1Down && !panel.altPressed) {
-			if(Main.editingPanel.getCurrentPanel() == EditPanel.Entities) {
+			if(Main.editingPanel.getCurrentPanel() == EditPanel.Selection || (Main.editingPanel.getCurrentPanel() == EditPanel.Entities && Main.editingPanel.entities.entityList.isSelectionEmpty())) {
 				if(panel.selectedEntity != null) {
 					int x = panel.selectedEntity.x;
 					int y = panel.selectedEntity.y;

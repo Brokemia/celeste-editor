@@ -52,6 +52,8 @@ public class MapPanel extends JPanel {
 	
 	public Level selectedLevel;
 	
+	public boolean renderingComplete;
+	
 	public boolean ctrlPressed;
 	
 	public boolean altPressed;
@@ -148,6 +150,7 @@ public class MapPanel extends JPanel {
 	@Override
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
+		renderingComplete = false;
 		
 		((Graphics2D)g).scale(actualZoom, actualZoom);
 		g.translate(offset.x, offset.y);
@@ -161,6 +164,8 @@ public class MapPanel extends JPanel {
 		drawTriggers(g);
 		drawSelectionBox(g);
 		drawRooms(g);
+		
+		renderingComplete = true;
 	}
 	
 	public void drawFillers(Graphics g) {
@@ -308,6 +313,7 @@ public class MapPanel extends JPanel {
 				g.fillRect(level.bounds.x, level.bounds.y, level.bounds.width, level.bounds.height);
 				g.setColor(Color.black);
 			} else if(Main.editingPanel.tiles.selectedTileTool != null && Main.editingPanel.getCurrentPanel() == EditPanel.Tiles) {
+				// TODO draw entity preview
 				// Draw brush preview
 				boolean[][] tileOverlay = Main.editingPanel.tiles.selectedTileTool.getTileOverlay();
 				Point tileOverlayPos = Main.editingPanel.tiles.selectedTileTool.getTileOverlayPos();

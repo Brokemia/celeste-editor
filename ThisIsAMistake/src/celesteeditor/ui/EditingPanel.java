@@ -10,7 +10,7 @@ import celesteeditor.Main;
 public class EditingPanel extends JPanel {
 	
 	public enum EditPanel {
-		Tiles, Entities;
+		Tiles, Entities, Selection;
 	}
 
 	public JTabbedPane tabbedPane = new JTabbedPane();
@@ -19,19 +19,25 @@ public class EditingPanel extends JPanel {
 	
 	public EntitiesTab entities = new EntitiesTab();
 	
+	public JPanel selection = new JPanel();
+	
 	public EditingPanel() {
 		setLayout(new BorderLayout());
 		tabbedPane.addTab("Tiles", tiles);
 		tabbedPane.addTab("Entities", entities);
+		tabbedPane.addTab("Selection", selection);
 		add(tabbedPane);
 	}
 	
 	public EditPanel getCurrentPanel() {
-		if(Main.editingPanel.tabbedPane.getSelectedComponent() == Main.editingPanel.tiles) {
+		if(Main.editingPanel.tabbedPane.getSelectedComponent() == tiles) {
 			return EditPanel.Tiles;
 		}
+		if(Main.editingPanel.tabbedPane.getSelectedComponent() == entities) {
+			return EditPanel.Entities;
+		}
 		
-		return EditPanel.Entities;
+		return EditPanel.Selection;
 	}
 	
 }

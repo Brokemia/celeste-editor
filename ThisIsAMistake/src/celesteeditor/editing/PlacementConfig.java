@@ -6,8 +6,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
 
-import celesteeditor.util.EntityProperty;
-import celesteeditor.util.EntityProperty.PropertyType;
+import celesteeditor.data.EntityProperty;
+import celesteeditor.data.EntityProperty.PropertyType;
 
 public class PlacementConfig {
 	

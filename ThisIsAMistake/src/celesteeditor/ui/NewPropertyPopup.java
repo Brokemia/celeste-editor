@@ -13,7 +13,7 @@ import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 
 import celesteeditor.data.Entity;
-import celesteeditor.util.EntityProperty.PropertyType;
+import celesteeditor.data.EntityProperty.PropertyType;
 
 public class NewPropertyPopup extends JFrame {
 	

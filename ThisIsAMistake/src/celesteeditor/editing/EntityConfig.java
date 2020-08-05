@@ -111,6 +111,9 @@ public class EntityConfig {
 				}
 			}
 		}
+		if(res.image == null) {
+			res.setImage("");
+		}
 		
 		return res;
 	}

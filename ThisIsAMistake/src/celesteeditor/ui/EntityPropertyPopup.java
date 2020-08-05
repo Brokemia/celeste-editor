@@ -24,9 +24,9 @@ import javax.swing.border.EmptyBorder;
 
 import celesteeditor.Main;
 import celesteeditor.data.Entity;
+import celesteeditor.data.EntityProperty;
+import celesteeditor.data.EntityProperty.PropertyType;
 import celesteeditor.editing.EntityConfig;
-import celesteeditor.util.EntityProperty;
-import celesteeditor.util.EntityProperty.PropertyType;
 import celesteeditor.util.Util;
 
 public class EntityPropertyPopup extends JFrame {

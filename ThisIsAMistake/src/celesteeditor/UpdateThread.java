@@ -6,8 +6,10 @@ public class UpdateThread implements Runnable {
 	public void run() {
 		while(true) {
 			try {
-				Thread.sleep(70);
-				Main.mainWindow.repaint();
+				Thread.sleep(50);
+				if(Main.mapPanel.renderingComplete) {
+					Main.mainWindow.repaint();
+				}
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
