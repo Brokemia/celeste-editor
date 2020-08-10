@@ -3,14 +3,15 @@ package celesteeditor.data;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map.Entry;
 
 import celesteeditor.BinaryPacker.Element;
+import celesteeditor.Main;
 import celesteeditor.data.EntityProperty.PropertyType;
 import celesteeditor.editing.EntityConfig;
 import celesteeditor.editing.EntityConfig.VisualType;
 import celesteeditor.editing.PlacementConfig;
-import celesteeditor.Main;
 
 public class Entity implements ElementEncoded {
 	public String name;
@@ -68,6 +69,7 @@ public class Entity implements ElementEncoded {
 	@Override
 	public Element asElement() {
 		Element res = new Element(name);
+		res.Attributes = new HashMap<>();
 		res.Attributes.put("x", x);
 		res.Attributes.put("y", y);
 		res.Attributes.put("originX", originX);
@@ -76,11 +78,15 @@ public class Entity implements ElementEncoded {
 		for(EntityProperty p : properties) {
 			res.Attributes.put(p.name, p.value);
 		}
-		for(Point n : nodes) {
-			Element node = new Element("node");
-			node.Attributes.put("x", n.x);
-			node.Attributes.put("y", n.y);
-			res.Children.add(node);
+		if(nodes.size() > 0) {
+			res.Children = new ArrayList<>();
+			for(Point n : nodes) {
+				Element node = new Element("node");
+				node.Attributes = new HashMap<>();
+				node.Attributes.put("x", n.x);
+				node.Attributes.put("y", n.y);
+				res.Children.add(node);
+			}
 		}
 		return res;
 	}

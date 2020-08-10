@@ -1,6 +1,8 @@
 package celesteeditor.data;
 
 import java.awt.Rectangle;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import celesteeditor.BinaryPacker.Element;
 
@@ -66,6 +68,8 @@ public class Level implements ElementEncoded {
 	@Override
 	public Element asElement() {
 		Element res = new Element("level");
+		res.Attributes = new HashMap<>();
+		res.Children = new ArrayList<>();
 		res.Attributes.put("c", c);
 		res.Attributes.put("name", name);
 		res.Attributes.put("x", bounds.x);
@@ -92,14 +96,16 @@ public class Level implements ElementEncoded {
 		res.Attributes.put("space", space);
 		
 		res.Children.add(triggers.asElement());
-		res.Children.add(fgTiles.asElement());
-		res.Children.add(fgDecals.asElement());
+		//res.Children.add(fgTiles.asElement());
+		if(fgDecals != null)
+			res.Children.add(fgDecals.asElement());
 		res.Children.add(solids.asElement());
 		res.Children.add(entities.asElement());
-		res.Children.add(bgTiles.asElement());
-		res.Children.add(bgDecals.asElement());
+		//res.Children.add(bgTiles.asElement());
+		if(bgDecals != null)
+			res.Children.add(bgDecals.asElement());
 		res.Children.add(bg.asElement());
-		res.Children.add(objTiles.asElement());
+		//res.Children.add(objTiles.asElement()); TODO re-enable when fixed
 		return res;
 	}
 
@@ -113,18 +119,18 @@ public class Level implements ElementEncoded {
 		bounds.height = (int)element.Attributes.get("height");
 		cameraOffsetX = element.AttrFloat("cameraOffsetX", 0);
 		cameraOffsetY = element.AttrFloat("cameraOffsetY", 0);
-		ambience = (String)element.Attributes.get("ambience");
+		ambience = element.Attr("ambience");
 		ambienceProgress = element.Attr("ambienceProgress");
-		music = (String)element.Attributes.get("music");
+		music = element.Attr("music");
 		musicProgress = element.Attr("musicProgress", "");
-		altMusic = (String)element.Attributes.get("alt_music");
+		altMusic = element.Attr("alt_music");
 		delayAltMusicFade = element.AttrBool("delayAltMusicFade", false);
 		musicLayer1 = element.AttrBool("musicLayer1", true);
 		musicLayer2 = element.AttrBool("musicLayer2", true);
 		musicLayer3 = element.AttrBool("musicLayer3", true);
 		musicLayer4 = element.AttrBool("musicLayer4", true);
 		whisper = element.AttrBool("whisper", false);
-		windPattern = (String)element.Attributes.get("windPattern");
+		windPattern = element.Attr("windPattern");
 		disableDownTransition = element.AttrBool("disableDownTransition", false);
 		dark = element.AttrBool("dark", false);
 		underwater = element.AttrBool("underwater", false);

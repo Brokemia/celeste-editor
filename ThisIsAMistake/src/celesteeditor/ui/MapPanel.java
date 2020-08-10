@@ -12,6 +12,9 @@ import java.awt.Stroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 
 import javax.swing.AbstractAction;
@@ -22,6 +25,7 @@ import javax.swing.KeyStroke;
 import com.text.TextAlignment;
 import com.text.TextRenderer;
 
+import celesteeditor.BinaryPacker;
 import celesteeditor.Main;
 import celesteeditor.data.Decal;
 import celesteeditor.data.Entity;
@@ -96,6 +100,30 @@ public class MapPanel extends JPanel {
 				altPressed = false;
 			}});
 		
+		getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK, false), "save");
+		getActionMap().put("save", new AbstractAction() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					Main.saveMap();
+				} catch (FileNotFoundException e1) {
+					e1.printStackTrace();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+			}});
+		
+		getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK, false), "open");
+		getActionMap().put("open", new AbstractAction() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					Main.openMap();
+				} catch (FileNotFoundException e1) {
+					e1.printStackTrace();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+			}});
+		
 		getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "delete");
 		getActionMap().put("delete", new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
@@ -155,15 +183,17 @@ public class MapPanel extends JPanel {
 		((Graphics2D)g).scale(actualZoom, actualZoom);
 		g.translate(offset.x, offset.y);
 		
-		drawFillers(g);
-		drawTiles(g, false);
-		drawDecals(g, false);
-		drawEntities(g);
-		drawTiles(g, true);
-		drawDecals(g, true);
-		drawTriggers(g);
-		drawSelectionBox(g);
-		drawRooms(g);
+		if(Main.loadedMap != null) {
+			drawFillers(g);
+			drawTiles(g, false);
+			drawDecals(g, false);
+			drawEntities(g);
+			drawTiles(g, true);
+			drawDecals(g, true);
+			drawTriggers(g);
+			drawSelectionBox(g);
+			drawRooms(g);
+		}
 		
 		renderingComplete = true;
 	}
@@ -186,6 +216,9 @@ public class MapPanel extends JPanel {
 			for(int i = 0; i < tiles.length; i++) {
 				for(int j = 0; j < tiles[i].length; j++) {
 					char tile = tiles[i][j];
+					if(tile != ' ' && tile != 0) {
+						//System.out.println(tile);
+					}
 					Tiletype type = tileTypes.stream().filter((t) -> t.tile == tile).findFirst().orElse(null);
 					g.setColor(type == null ? Color.pink : type.color);
 					if(type == null) System.out.println((fg ? "Fore" : "Back") + "ground tile " + tile + " not found");
@@ -198,11 +231,13 @@ public class MapPanel extends JPanel {
 	public void drawDecals(Graphics g, boolean fg) {
 		for(Level level : Main.loadedMap.levels) {
 			ListLevelLayer decals = (fg ? level.fgDecals : level.bgDecals);
-			for(int i = 0; i < decals.items.size(); i++) {
-				Decal d = (Decal)decals.items.get(i);
-				BufferedImage img = d.getImage();
-				
-				g.drawImage(img, d.x + level.bounds.x - img.getWidth() / 2 * d.scaleX, d.y + level.bounds.y - img.getHeight() / 2 * d.scaleY, img.getWidth() * d.scaleX, img.getHeight() * d.scaleY, null);
+			if(decals != null) {
+				for(int i = 0; i < decals.items.size(); i++) {
+					Decal d = (Decal)decals.items.get(i);
+					BufferedImage img = d.getImage();
+					
+					g.drawImage(img, d.x + level.bounds.x - img.getWidth() / 2 * d.scaleX, d.y + level.bounds.y - img.getHeight() / 2 * d.scaleY, img.getWidth() * d.scaleX, img.getHeight() * d.scaleY, null);
+				}
 			}
 		}
 	}

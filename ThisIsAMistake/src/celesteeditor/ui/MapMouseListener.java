@@ -60,14 +60,14 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 		if(button3Down || (button1Down && panel.altPressed && !panel.draggingEntity)) {
 			if(dragStart != null)
 				panel.offset = new Point((int)(e.getPoint().x * panel.getActualZoom(-panel.getZoom()) - dragStart.x), (int)(e.getPoint().y * panel.getActualZoom(-panel.getZoom()) - dragStart.y));
-		} else if(Main.editingPanel.getCurrentPanel() == EditPanel.Tiles) {
+		} else if(Main.editingPanel.getCurrentPanel() == EditPanel.Tiles && Main.loadedMap != null) {
 			placeTile(e.getPoint(), MouseAction.DRAGGED);
 		}
 	}
 
 	@Override
 	public void mouseMoved(MouseEvent e) {
-		if(Main.editingPanel.tiles.selectedTileTool != null) {
+		if(Main.editingPanel.tiles.selectedTileTool != null && Main.loadedMap != null) {
 			for(Level level : Main.loadedMap.levels) {
 				Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
 				if(lBounds.contains(e.getPoint())) {
@@ -85,27 +85,29 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 	@Override
 	public void mouseClicked(MouseEvent e) {
 		if(Main.editingPanel.getCurrentPanel() == EditPanel.Entities && !Main.editingPanel.entities.entityList.isSelectionEmpty() && e.getButton() == MouseEvent.BUTTON1) {
-			for(Level level : Main.loadedMap.levels) {
-				Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
-				if(lBounds.contains(e.getPoint())) {
-					panel.selectedLevel = level;
-					panel.selectedEntity = null;
-					panel.selectedDecal = null;
-					panel.selectedNode = -1;
-					
-					Entity entity = Entity.fromPlacementConfig(EntitiesTab.placementConfig.get(Main.editingPanel.entities.entityList.getSelectedValue()));
-					Point coords = new Point((int)((e.getPoint().x -  lBounds.x) / panel.getActualZoom()), (int)((e.getPoint().y - lBounds.y) / panel.getActualZoom()));
-					// Snap to grid if not holding ctrl
-					if(!Main.mapPanel.ctrlPressed) {
-						coords.x /= 8;
-						coords.y /= 8;
-						coords.x *= 8;
-						coords.y *= 8;
+			if(Main.loadedMap != null) {
+				for(Level level : Main.loadedMap.levels) {
+					Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
+					if(lBounds.contains(e.getPoint())) {
+						panel.selectedLevel = level;
+						panel.selectedEntity = null;
+						panel.selectedDecal = null;
+						panel.selectedNode = -1;
+						
+						Entity entity = Entity.fromPlacementConfig(EntitiesTab.placementConfig.get(Main.editingPanel.entities.entityList.getSelectedValue()));
+						Point coords = new Point((int)((e.getPoint().x -  lBounds.x) / panel.getActualZoom()), (int)((e.getPoint().y - lBounds.y) / panel.getActualZoom()));
+						// Snap to grid if not holding ctrl
+						if(!Main.mapPanel.ctrlPressed) {
+							coords.x /= 8;
+							coords.y /= 8;
+							coords.x *= 8;
+							coords.y *= 8;
+						}
+						entity.x = coords.x;
+						entity.y = coords.y;
+						panel.selectedLevel.entities.items.add(entity);
+						return;
 					}
-					entity.x = coords.x;
-					entity.y = coords.y;
-					panel.selectedLevel.entities.items.add(entity);
-					return;
 				}
 			}
 		} else if(Main.editingPanel.getCurrentPanel() == EditPanel.Entities || Main.editingPanel.getCurrentPanel() == EditPanel.Selection) {
@@ -139,104 +141,106 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 			}
 			if(done) return;
 			
-			for(Level level : Main.loadedMap.levels) {
-				Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
-				if(lBounds.contains(e.getPoint()) && panel.selectedLevel != level) {
-					panel.selectedLevel = level;
-					panel.selectedEntity = null;
-					panel.selectedDecal = null;
-					panel.selectedNode = -1;
-				}
-				openPopupFor = null;
-				done = false;
-				for(int i = 0; i < level.entities.items.size(); i++) {
-					Entity entity = (Entity)level.entities.items.get(i);
-					Rectangle eBounds = entity.getBounds(level, -1, panel.offset, panel.getActualZoom());
-					if(eBounds.contains(e.getPoint())) {
-						switch(e.getButton()) {
-						case MouseEvent.BUTTON1:
-							panel.selectedLevel = level;
-							panel.selectedEntity = entity;
-							panel.selectedDecal = null;
-							panel.selectedNode = -1;
-							done = true;
-							break;
-						case MouseEvent.BUTTON3:
-							openPopupFor = entity;
-							done = true;
-							break;
-						}
+			if(Main.loadedMap != null) {
+				for(Level level : Main.loadedMap.levels) {
+					Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
+					if(lBounds.contains(e.getPoint()) && panel.selectedLevel != level) {
+						panel.selectedLevel = level;
+						panel.selectedEntity = null;
+						panel.selectedDecal = null;
+						panel.selectedNode = -1;
 					}
-				}
-				if(openPopupFor != null) {
-					EntityPropertyPopup popup = new EntityPropertyPopup(openPopupFor, false);
-					popup.setVisible(true);
-				}
-				if(done) return;
-				
-				Decal decalOpenPopupFor = null;
-				done = false;
-				for(ListLevelLayer decals : new ListLevelLayer[] {level.bgDecals, level.fgDecals} ) {  
-					for(int i = 0; i < decals.items.size(); i++) {
-						Decal decal = (Decal)decals.items.get(i);
-						BufferedImage img = decal.getImage();
-						Rectangle dBounds = new Rectangle((int)((level.bounds.x + decal.x - img.getWidth() / 2 * Math.abs(decal.scaleX) + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + decal.y - img.getHeight() / 2 * Math.abs(decal.scaleY) + panel.offset.y) * panel.getActualZoom()), (int)(img.getWidth() * Math.abs(decal.scaleX) * panel.getActualZoom()), (int)(img.getHeight() * Math.abs(decal.scaleY) * panel.getActualZoom()));
-						
-						if(dBounds.contains(e.getPoint())) {
+					openPopupFor = null;
+					done = false;
+					for(int i = 0; i < level.entities.items.size(); i++) {
+						Entity entity = (Entity)level.entities.items.get(i);
+						Rectangle eBounds = entity.getBounds(level, -1, panel.offset, panel.getActualZoom());
+						if(eBounds.contains(e.getPoint())) {
 							switch(e.getButton()) {
 							case MouseEvent.BUTTON1:
 								panel.selectedLevel = level;
-								panel.selectedEntity = null;
-								panel.selectedDecal = decal;
+								panel.selectedEntity = entity;
+								panel.selectedDecal = null;
 								panel.selectedNode = -1;
 								done = true;
 								break;
 							case MouseEvent.BUTTON3:
-								decalOpenPopupFor = decal;
+								openPopupFor = entity;
 								done = true;
 								break;
 							}
 						}
 					}
-				}
-				
-				if(decalOpenPopupFor != null) {
-					DecalPropertyPopup popup = new DecalPropertyPopup(decalOpenPopupFor);
-					popup.setVisible(true);
-				}
-				if(done) return;
-				
-				openPopupFor = null;
-				done = false;
-				for(int i = 0; i < level.triggers.items.size(); i++) {
-					Entity trigger = (Entity)level.triggers.items.get(i);
-					Rectangle tBounds = trigger.getBounds(level, -1, panel.offset, panel.getActualZoom());
-					if(tBounds.contains(e.getPoint())) {
-						switch(e.getButton()) {
-						case MouseEvent.BUTTON1:
-							panel.selectedLevel = level;
-							panel.selectedEntity = trigger;
-							panel.selectedDecal = null;
-							panel.selectedNode = -1;
-							done = true;
-							break;
-						case MouseEvent.BUTTON3:
-							openPopupFor = trigger;
-							done = true;
-							break;
+					if(openPopupFor != null) {
+						EntityPropertyPopup popup = new EntityPropertyPopup(openPopupFor, false);
+						popup.setVisible(true);
+					}
+					if(done) return;
+					
+					Decal decalOpenPopupFor = null;
+					done = false;
+					for(ListLevelLayer decals : new ListLevelLayer[] {level.bgDecals, level.fgDecals} ) {  
+						for(int i = 0; i < decals.items.size(); i++) {
+							Decal decal = (Decal)decals.items.get(i);
+							BufferedImage img = decal.getImage();
+							Rectangle dBounds = new Rectangle((int)((level.bounds.x + decal.x - img.getWidth() / 2 * Math.abs(decal.scaleX) + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + decal.y - img.getHeight() / 2 * Math.abs(decal.scaleY) + panel.offset.y) * panel.getActualZoom()), (int)(img.getWidth() * Math.abs(decal.scaleX) * panel.getActualZoom()), (int)(img.getHeight() * Math.abs(decal.scaleY) * panel.getActualZoom()));
+							
+							if(dBounds.contains(e.getPoint())) {
+								switch(e.getButton()) {
+								case MouseEvent.BUTTON1:
+									panel.selectedLevel = level;
+									panel.selectedEntity = null;
+									panel.selectedDecal = decal;
+									panel.selectedNode = -1;
+									done = true;
+									break;
+								case MouseEvent.BUTTON3:
+									decalOpenPopupFor = decal;
+									done = true;
+									break;
+								}
+							}
 						}
 					}
+					
+					if(decalOpenPopupFor != null) {
+						DecalPropertyPopup popup = new DecalPropertyPopup(decalOpenPopupFor);
+						popup.setVisible(true);
+					}
+					if(done) return;
+					
+					openPopupFor = null;
+					done = false;
+					for(int i = 0; i < level.triggers.items.size(); i++) {
+						Entity trigger = (Entity)level.triggers.items.get(i);
+						Rectangle tBounds = trigger.getBounds(level, -1, panel.offset, panel.getActualZoom());
+						if(tBounds.contains(e.getPoint())) {
+							switch(e.getButton()) {
+							case MouseEvent.BUTTON1:
+								panel.selectedLevel = level;
+								panel.selectedEntity = trigger;
+								panel.selectedDecal = null;
+								panel.selectedNode = -1;
+								done = true;
+								break;
+							case MouseEvent.BUTTON3:
+								openPopupFor = trigger;
+								done = true;
+								break;
+							}
+						}
+					}
+					if(openPopupFor != null) {
+						EntityPropertyPopup popup = new EntityPropertyPopup(openPopupFor, true);
+						popup.setVisible(true);
+					}
+					if(done) return;
 				}
-				if(openPopupFor != null) {
-					EntityPropertyPopup popup = new EntityPropertyPopup(openPopupFor, true);
-					popup.setVisible(true);
-				}
-				if(done) return;
 			}
 			
 			panel.selectedEntity = null;
 			panel.selectedNode = -1;
-		} else {
+		} else if(Main.loadedMap != null) {
 			for(Level level : Main.loadedMap.levels) {
 				Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
 				if(lBounds.contains(e.getPoint()) && panel.selectedLevel != level) {
@@ -302,7 +306,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 						dragStart.translate(-panel.selectedDecal.x, -panel.selectedDecal.y);
 					}
 				}
-			} else if(Main.editingPanel.getCurrentPanel() == EditPanel.Tiles) {
+			} else if(Main.editingPanel.getCurrentPanel() == EditPanel.Tiles && Main.loadedMap != null) {
 				placeTile(e.getPoint(), MouseAction.PRESSED);
 			}
 		}
@@ -328,7 +332,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 			break;
 		}
 		
-		if(Main.editingPanel.getCurrentPanel() == EditPanel.Tiles) {
+		if(Main.editingPanel.getCurrentPanel() == EditPanel.Tiles && Main.loadedMap != null) {
 			placeTile(e.getPoint(), MouseAction.RELEASED);
 		}
 		

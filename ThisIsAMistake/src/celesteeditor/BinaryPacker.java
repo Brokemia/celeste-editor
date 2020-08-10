@@ -1,27 +1,26 @@
 package celesteeditor;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.io.FilenameUtils;
-import org.w3c.dom.Attr;
-import org.w3c.dom.Document;
-import org.xml.sax.SAXException;
 
 import github.MichaelBeeu.util.EndianDataInputStream;
+import github.MichaelBeeu.util.EndianDataOutputStream;
 
 public class BinaryPacker {
     public static class Element {
@@ -118,10 +117,10 @@ public class BinaryPacker {
     	public byte type;
     	public Object value;
     }
-
-    public static final HashSet<String> IgnoreAttributes = new HashSet<>(Arrays.asList("_eid"));
-
+    
     public static String InnerTextAttributeName = "innerText";
+    
+    public static final HashSet<String> IgnoreAttributes = new HashSet<>(Arrays.asList("_eid"));
 
     public static String OutputFileExtension = ".bin";
 
@@ -143,30 +142,29 @@ public class BinaryPacker {
     	}
     }
     
-    public static void toBinary(String filename, String outdir) throws SAXException, IOException {
-        String extension = FilenameUtils.getExtension(filename);
-        File outputFile;
-        if(outdir != null) {
-        	outputFile = new File(outdir, FilenameUtils.getName(filename.replaceAll(extension, OutputFileExtension)));
-        } else {
-        	outputFile = new File(filename.replaceAll(extension, OutputFileExtension));
-        }
-        Document xml = docBuilder.parse(filename);
-        toBinary(xml.getDocumentElement(), outputFile);
-    }
+//    public static void toBinary(String filename, String outdir) throws SAXException, IOException {
+//        String extension = FilenameUtils.getExtension(filename);
+//        File outputFile;
+//        if(outdir != null) {
+//        	outputFile = new File(outdir, FilenameUtils.getName(filename.replaceAll(extension, OutputFileExtension)));
+//        } else {
+//        	outputFile = new File(filename.replaceAll(extension, OutputFileExtension));
+//        }
+//        Document xml = docBuilder.parse(filename);
+//        toBinary(xml.getDocumentElement(), outputFile);
+//    }
 
-    public static void toBinary(org.w3c.dom.Element rootElement, File outFile) {
+    public static void toBinary(Element rootElement, File outFile) {
         stringValue.clear();
         stringCounter = 0;
         createLookupTable(rootElement);
         addLookupValue(InnerTextAttributeName);
-        try (DataOutputStream outStream = new DataOutputStream(new FileOutputStream(outFile))) {
-            // TODO Change to use special format, not UTF
-            outStream.writeUTF("CELESTE MAP");
-            outStream.writeUTF(FilenameUtils.removeExtension(outFile.getName()));
-            outStream.writeShort((short)stringValue.size());
-            for (Entry<String, Short> item : stringValue.entrySet()) {
-                outStream.writeUTF(item.getKey());
+        try (EndianDataOutputStream outStream = new EndianDataOutputStream(new FileOutputStream(outFile)).order(ByteOrder.LITTLE_ENDIAN)) {
+            writeString(outStream, "CELESTE MAP");
+            writeString(outStream, FilenameUtils.removeExtension(outFile.getName()));
+            outStream.writeShort((short)stringValue.size() & 0xffff);
+            for (Entry<String, Short> item : stringValue.entrySet().stream().sorted((e1, e2) -> e1.getValue().compareTo(e2.getValue())).collect(Collectors.toList())) {
+                writeString(outStream, item.getKey());
             }
             writeElement(outStream, rootElement);
             outStream.flush();
@@ -175,21 +173,24 @@ public class BinaryPacker {
         }
     }
 
-    private static void createLookupTable(org.w3c.dom.Element element) {
-        addLookupValue(element.getTagName());        
-        for (int i = 0; i < element.getAttributes().getLength(); i++) {
-        	Attr attribute = (Attr) element.getAttributes().item(i);
-        	if(!IgnoreAttributes.contains(attribute.getName())) {
-                addLookupValue(attribute.getName());
-                AttributeValue val = parseValue(attribute.getValue());
-                if (val != null && val.type == 5) {
-                    addLookupValue(attribute.getValue());
-                }
-            }
+    private static void createLookupTable(Element element) {
+        addLookupValue(element.Name);
+        if(element.Attributes != null) {
+	        for (Entry<String, Object> entry : element.Attributes.entrySet()) {
+	        	System.out.println(entry.getKey());
+	        	if(!IgnoreAttributes.contains(entry.getKey()) && !entry.getKey().equals(InnerTextAttributeName) && entry.getValue().toString().length() > 0) {
+	                addLookupValue(entry.getKey());
+	                AttributeValue val = getAttr(entry.getValue());
+	                if (val != null && val.type == 5) {
+	                    addLookupValue(val.value.toString());
+	                }
+	            }
+	        }
         }
-        for (int i = 0; i < element.getChildNodes().getLength(); i++) {
-        	org.w3c.dom.Element childNode = (org.w3c.dom.Element)element.getChildNodes().item(i);
-            createLookupTable(childNode);
+        if(element.Children != null) {
+	        for (Element child : element.Children) {
+	            createLookupTable(child);
+	        }
         }
     }
 
@@ -200,70 +201,97 @@ public class BinaryPacker {
         }
     }
 
-    private static void writeElement(DataOutputStream outStream, org.w3c.dom.Element element) throws IOException {
-        int elements = 0;
-        for (int i = 0; i < element.getChildNodes().getLength(); i++) {
-            if (element.getChildNodes().item(i) instanceof org.w3c.dom.Element) {
-                elements++;
-            }
+    private static void writeElement(EndianDataOutputStream outStream, Element element) throws IOException {
+    	int numAttr = 0;
+        if(element.Attributes != null) {
+	        for(Entry<String, Object> entry : element.Attributes.entrySet()) {
+	            if (!IgnoreAttributes.contains(entry.getKey()) && entry.getValue().toString().length() > 0) {
+	                numAttr++;
+	            }
+	        }
         }
-        int numAttr = 0;
-        for(int i = 0; i < element.getAttributes().getLength(); i++) {
-            if (!IgnoreAttributes.contains(((Attr)element.getAttributes().item(i)).getName())) {
-                numAttr++;
-            }
-        }
-        if (element.getTextContent() != null && element.getTextContent().length() > 0 && elements == 0) {
-            numAttr++;
-        }
-        outStream.writeShort(stringValue.get(element.getTagName()));
+        outStream.writeShort(stringValue.get(element.Name));
         outStream.writeByte((byte)numAttr);
-        for (int i = 0; i < element.getAttributes().getLength(); i++) {
-        	Attr attribute = (Attr)element.getAttributes().item(i);
-            if (!IgnoreAttributes.contains(attribute.getName())) {
-                AttributeValue val = parseValue(attribute.getValue());
-                outStream.writeShort(stringValue.get(attribute.getName()));
-                outStream.writeByte(val.type);
-                switch (val.type) {
-                    case 0:
-                        outStream.writeBoolean((boolean)val.value);
-                        break;
-                    case 1:
-                    	outStream.writeByte((byte)val.value);
-                        break;
-                    case 2:
-                    	outStream.writeShort((short)val.value);
-                        break;
-                    case 3:
-                    	outStream.writeInt((int)val.value);
-                        break;
-                    case 4:
-                    	outStream.writeFloat((float)val.value);
-                        break;
-                    case 5:
-                    	outStream.writeShort(stringValue.get((String)val.value));
-                        break;
-                }
-            }
+        if(element.Attributes != null) {
+	        for (Entry<String, Object> entry : element.Attributes.entrySet()) {
+	            if (!IgnoreAttributes.contains(entry.getKey()) && !entry.getKey().equals(InnerTextAttributeName) && entry.getValue().toString().length() > 0) {
+	                AttributeValue val = getAttr(entry.getValue());
+	                outStream.writeShort(stringValue.get(entry.getKey()));
+	                outStream.writeByte(val.type);
+	                switch (val.type) {
+	                    case 0:
+	                        outStream.writeBoolean((boolean)val.value);
+	                        break;
+	                    case 1:
+	                    	outStream.write((byte)val.value);
+	                        break;
+	                    case 2:
+	                    	outStream.writeShort((short)val.value);
+	                        break;
+	                    case 3:
+	                    	outStream.writeInt((int)val.value);
+	                        break;
+	                    case 4:
+	                    	outStream.writeFloat((float)val.value);
+	                        break;
+	                    case 5:
+	                    	outStream.writeShort(stringValue.get((String)val.value));
+	                        break;
+	                }
+	            }
+	        }
+	        if (element.Attr(InnerTextAttributeName).length() > 0) {
+	            outStream.writeShort(stringValue.get(InnerTextAttributeName));
+	            if (element.Name == "solids" || element.Name == "bg") {
+	                byte[] array = RunLengthEncoding.encode(element.Attr(InnerTextAttributeName));
+	                outStream.writeByte((byte)7);
+	                outStream.writeShort((short)array.length);
+	                outStream.write(array);
+	            } else {
+	                outStream.writeByte((byte)6);
+	                writeString(outStream, element.Attr(InnerTextAttributeName));
+	            }
+	        }
         }
-        if (element.getTextContent() != null && element.getTextContent().length() > 0 && elements == 0) {
-            outStream.writeShort(stringValue.get(InnerTextAttributeName));
-            if (element.getTagName() == "solids" || element.getTagName() == "bg") {
-                byte[] array = RunLengthEncoding.encode(element.getTextContent());
-                outStream.writeByte((byte)7);
-                outStream.writeShort((short)array.length);
-                outStream.write(array);
-            } else {
-                outStream.writeByte((byte)6);
-                outStream.writeUTF(element.getTextContent());
-            }
+        
+        if(element.Children != null) {
+	        outStream.writeShort((short)element.Children.size());
+	        for (int i = 0; i < element.Children.size(); i++) {
+	            writeElement(outStream, element.Children.get(i));
+	        }
+        } else {
+        	outStream.writeShort(0);
         }
-        outStream.writeShort((short)elements);
-        for (int i = 0; i < element.getChildNodes().getLength(); i++) {
-            if (element.getChildNodes().item(i) instanceof org.w3c.dom.Element) {
-                writeElement(outStream, (org.w3c.dom.Element)element.getChildNodes().item(i));
-            }
+    }
+    
+    private static AttributeValue getAttr(Object val) {
+    	AttributeValue res = null;
+        if (val instanceof Boolean) {
+        	res = new AttributeValue();
+        	res.type = 0;
+            res.value = (Boolean) val;
+        } else if(tryParseByte(val.toString()) && Byte.parseByte(val.toString()) >= 0) {
+        	res = new AttributeValue();
+            res.type = 1;
+            res.value = Byte.parseByte(val.toString());
+        } else if (tryParseShort(val.toString())) {
+        	res = new AttributeValue();
+            res.type = 2;
+            res.value = Short.parseShort(val.toString());
+        } else if (tryParseInt(val.toString())) {
+        	res = new AttributeValue();
+            res.type = 3;
+            res.value = Integer.parseInt(val.toString());
+        } else if (tryParseFloat(val.toString())) {
+        	res = new AttributeValue();
+            res.type = 4;
+            res.value = Float.parseFloat(val.toString().trim());
+        } else {
+        	res = new AttributeValue();
+            res.type = 5;
+            res.value = val.toString();
         }
+        return res;
     }
 
     private static AttributeValue parseValue(String value) {
@@ -272,7 +300,7 @@ public class BinaryPacker {
         	res = new AttributeValue();
         	res.type = 0;
             res.value = Boolean.parseBoolean(value);
-        } else if(tryParseByte(value)) {
+        } else if(tryParseByte(value) && Byte.parseByte(value) >= 0) {
         	res = new AttributeValue();
             res.type = 1;
             res.value = Byte.parseByte(value);
@@ -332,6 +360,22 @@ public class BinaryPacker {
     	return true;
     }
     
+    private static void write7BitEncodedInt(OutputStream stream, int val) throws IOException {
+    	long num;
+    	for (num = val & 0xFFFFFFFFL; num >= 128; num >>= 7)
+    	{
+    		stream.write((byte)(num | 0x80));
+    	}
+    	stream.write((byte)num);
+    }
+    
+    private static void writeString(OutputStream stream, String str) throws IOException {
+    	write7BitEncodedInt(stream, str.length());
+    	for(int i = 0; i < str.length(); i++) {
+    		stream.write(str.charAt(i));
+    	}
+    }
+    
     private static int read7BitEncodedInt(InputStream stream) throws IOException {
     	int num = 0;
     	int num2 = 0;
@@ -376,16 +420,13 @@ public class BinaryPacker {
         Element element = new Element();
         short lookup = reader.readShort();
         element.Name = stringLookup[lookup];
-        //System.out.println(lookup + ": " + element.Name);
         byte b = reader.readByte();
-        //System.out.println("attr: " + b);
         if (b > 0) {
             element.Attributes = new HashMap<String, Object>();
         }
         for (int i = 0; i < b; i++) {
         	lookup = reader.readShort();
             String key = stringLookup[lookup];
-            //System.out.println(lookup + ": " + key);
             byte type = reader.readByte();
             Object value = null;
             switch (type) {
@@ -418,11 +459,9 @@ public class BinaryPacker {
                         break;
                     }
             }
-            //System.out.println("type: " + type + ", val: " + value);
             element.Attributes.put(key, value);
         }
         short num = reader.readShort();
-        //System.out.println("children: " + num);
         if (num > 0) {
             element.Children = new ArrayList<Element>();
         }

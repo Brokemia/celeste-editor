@@ -16,6 +16,7 @@ public class ListLevelLayer extends LevelLayer {
 	@Override
 	public Element asElement() {
 		Element res = super.asElement();
+		res.Children = new ArrayList<>();
 		for(ElementEncoded e : items) {
 			res.Children.add(e.asElement());
 		}

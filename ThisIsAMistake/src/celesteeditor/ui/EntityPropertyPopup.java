@@ -83,7 +83,6 @@ public class EntityPropertyPopup extends JFrame {
 		String name = ((JLabel)propPanel.getComponent(0)).getText();
 		for(int i = 0; i < currentPopup.entity.properties.size(); i++) {
 			if(currentPopup.entity.properties.get(i).name.equals(name)) {
-				System.out.println(e.getActionCommand());
 				currentPopup.entity.properties.get(i).type = PropertyType.valueOf(e.getActionCommand());
 				((JTextField)propPanel.getComponent(1)).setText("");
 				currentPopup.revalidate();

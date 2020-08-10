@@ -1,6 +1,7 @@
 package celesteeditor.data;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import celesteeditor.BinaryPacker.Element;
 
@@ -37,6 +38,7 @@ public class Styleground implements ElementEncoded {
 	@Override
 	public Element asElement() {
 		Element res = new Element("apply");
+		res.Attributes = new HashMap<>();
 		res.Attributes.put("exclude", exclude);
 		res.Attributes.put("only", only);
 		res.Attributes.put("flag", flag);
@@ -61,6 +63,7 @@ public class Styleground implements ElementEncoded {
 		res.Attributes.put("instantOut", instantOut);
 		res.Attributes.put("wind", windMultiplier);
 		if(children != null && children.size() != 0) {
+			res.Children = new ArrayList<>();
 			for(Styleground c : children) {
 				res.Children.add(c.asElement());
 			}

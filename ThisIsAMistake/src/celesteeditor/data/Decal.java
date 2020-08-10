@@ -59,6 +59,7 @@ public class Decal implements ElementEncoded {
 	@Override
 	public Element asElement() {
 		Element res = new Element("decal");
+		res.Attributes = new HashMap<>();
 		res.Attributes.put("x", x);
 		res.Attributes.put("y", y);
 		res.Attributes.put("scaleX", scaleX);

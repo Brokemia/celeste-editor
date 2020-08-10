@@ -2,6 +2,7 @@ package celesteeditor.data;
 
 import java.awt.Rectangle;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import celesteeditor.BinaryPacker.Element;
 
@@ -46,31 +47,39 @@ public class Map implements ElementEncoded {
 	public Element asElement() {
 		Element res = new Element("Map");
 		res.Package = pkg;
+		res.Children = new ArrayList<>();
 		
 		Element Filler = new Element("Filler");
+		Filler.Children = new ArrayList<>();
 		for(Rectangle r : filler) {
 			Element f = new Element("rect");
+			f.Attributes = new HashMap<>();
 			f.Attributes.put("x", r.x);
 			f.Attributes.put("y", r.y);
-			f.Attributes.put("width", r.width);
-			f.Attributes.put("height", r.height);
+			f.Attributes.put("w", r.width);
+			f.Attributes.put("h", r.height);
 			Filler.Children.add(f);
 		}
 		res.Children.add(Filler);
 		
 		Element levelsE = new Element("levels");
+		levelsE.Children = new ArrayList<>();
 		for(Level l : levels) {
 			levelsE.Children.add(l.asElement());
 		}
 		res.Children.add(levelsE);
 		
 		Element style = new Element("Style");
+		style.Children = new ArrayList<>();
+		style.Attributes = new HashMap<>();
 		if(!backgroundColor.equals("000000")) {
 			style.Attributes.put("color", backgroundColor);
 		}
 		Element bg, fg;
 		style.Children.add(bg = new Element("Backgrounds"));
 		style.Children.add(fg = new Element("Foregrounds"));
+		bg.Children = new ArrayList<>();
+		fg.Children = new ArrayList<>();
 		for(Styleground s : backgrounds) {
 			bg.Children.add(s.asElement());
 		}

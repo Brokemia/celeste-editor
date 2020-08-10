@@ -1,5 +1,7 @@
 package celesteeditor.data;
 
+import java.util.HashMap;
+
 import celesteeditor.BinaryPacker.Element;
 
 public class LevelLayer implements ElementEncoded {
@@ -10,6 +12,7 @@ public class LevelLayer implements ElementEncoded {
 	@Override
 	public Element asElement() {
 		Element res = new Element(name);
+		res.Attributes = new HashMap<>();
 		res.Attributes.put("offsetX", offsetX);
 		res.Attributes.put("offsetY", offsetY);
 		

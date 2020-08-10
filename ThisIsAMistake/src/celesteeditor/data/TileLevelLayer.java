@@ -23,7 +23,7 @@ public class TileLevelLayer extends LevelLayer {
 		}
 		
 		for(int i = 0; i < split.length; i++) {
-			res[i] = new char[maxLen];
+			res[i] = new char[split[i].length()];
 			for(int j = 0; j < split[i].length(); j++) {
 				res[i][j] = split[i].charAt(j);
 			}
