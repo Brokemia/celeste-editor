@@ -30,7 +30,7 @@ import celesteeditor.data.EntityProperty.PropertyType;
 import celesteeditor.editing.EntityConfig;
 import celesteeditor.editing.PlacementConfig;
 import celesteeditor.editing.PlacementConfig.PlacementType;
-import celesteeditor.ui.EntitiesTab.ColoredHoverListener;
+import celesteeditor.ui.PlacementsTab.ColoredHoverListener;
 import celesteeditor.util.Util;
 
 public class PlacementConfigPopup extends JFrame {
@@ -57,6 +57,23 @@ public static final int width = 450;
 		currentPopup = this;
 		config = pc;
 		editing = pc != null;
+		
+		if(config == null) {
+			config = new PlacementConfig();
+			config.placementType = type;
+		}
+		// Add width and height if missing
+		if(type == PlacementType.Trigger) {
+			System.out.println("EditingTrigger");
+			if(!config.defaultProperties.stream().anyMatch((ep) -> ep.name.equals("width"))) {
+				System.out.println("w");
+				config.defaultProperties.add(new EntityProperty("width", PropertyType.Integer, 8));
+			}
+			if(!config.defaultProperties.stream().anyMatch((ep) -> ep.name.equals("height"))) {
+				config.defaultProperties.add(new EntityProperty("height", PropertyType.Integer, 8));
+			}
+		}
+		
 		JPanel entryPanel = new JPanel();
 		entryPanel.setLayout(new GridBagLayout());
 		
@@ -134,12 +151,12 @@ public static final int width = 450;
 		propsPanel.add(new JLabel("Type", JLabel.CENTER));
 		propsPanel.add(new JLabel("Name", JLabel.CENTER));
 		propsPanel.add(new JLabel("Default", JLabel.CENTER));
-		if(pc == null || pc.defaultProperties.size() == 0) {
+		if(config == null || config.defaultProperties.size() == 0) {
 			propsPanel.setVisible(false);
 		}
 		
-		if(pc != null) {
-			for(EntityProperty p : pc.defaultProperties) {
+		if(config != null) {
+			for(EntityProperty p : config.defaultProperties) {
 				JComboBox<PropertyType> ptBox = new JComboBox<>(PropertyType.values());
 				ptBox.setSelectedItem(p.type);
 			    propsPanel.add(ptBox);
@@ -164,11 +181,6 @@ public static final int width = 450;
 	    submitButton = new JButton(editing ? "Update" : "Add");
 	    submitButton.addActionListener(this::setOnAddAction);
 		add(submitButton, BorderLayout.SOUTH);
-		
-		if(config == null) {
-			config = new PlacementConfig();
-			config.placementType = type;
-		}
 	    
 		setSize(width, 300);
 		setLocationRelativeTo(null);
@@ -180,7 +192,7 @@ public static final int width = 450;
 		if(name.isBlank()) {
 			JOptionPane.showMessageDialog(null, "Placement name cannot be blank");
 			return;
-		} else if((!editing || !config.name.equals(name)) && EntitiesTab.placementConfig.entrySet().stream().anyMatch((entry) -> entry.getKey().equals(name))) {
+		} else if((!editing || !config.name.equals(name)) && PlacementsTab.placementConfig.entrySet().stream().anyMatch((entry) -> entry.getKey().equals(name))) {
 			JOptionPane.showMessageDialog(null, "Placement \"" + name + "\" already exists");
 			return;
 		}
@@ -223,7 +235,7 @@ public static final int width = 450;
 		config.defaultProperties = props;
 		
 		if(!editing) {
-			EntitiesTab.placementConfig.put(config.name, config);
+			PlacementsTab.placementConfig.put(config.name, config);
 		} else if(renamed) {
 			// Delete the old config
 			File old = new File("config/placement/" + oldName + ".config");
@@ -231,11 +243,11 @@ public static final int width = 450;
 				old.delete();
 			}
 			
-			EntitiesTab.placementConfig.remove(oldName);
-			EntitiesTab.placementConfig.put(config.name, config);
+			PlacementsTab.placementConfig.remove(oldName);
+			PlacementsTab.placementConfig.put(config.name, config);
 		}
 		
-		Main.editingPanel.entities.refreshLists();
+		Main.editingPanel.placements.refreshLists();
 		
 		try {
 			File dir = new File("config/placement/");

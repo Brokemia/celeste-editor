@@ -316,7 +316,7 @@ public class MapPanel extends JPanel {
 		for(Level level : Main.loadedMap.levels) {
 			for(int i = 0; i < level.triggers.items.size(); i++) {
 				Entity e = (Entity)level.triggers.items.get(i);
-				Rectangle triggerBounds = new Rectangle(e.x + level.bounds.x, e.y + level.bounds.y, (int)e.getProperty("width").value, (int)e.getProperty("height").value);
+				Rectangle triggerBounds = new Rectangle(e.x + level.bounds.x, e.y + level.bounds.y, e.getPropertyValue("width", 8), e.getPropertyValue("height", 8));
 				g.setColor(new Color(200, 0, 0, 100));
 				g.fillRect(triggerBounds.x, triggerBounds.y, triggerBounds.width, triggerBounds.height);
 				g.setColor(Color.black);

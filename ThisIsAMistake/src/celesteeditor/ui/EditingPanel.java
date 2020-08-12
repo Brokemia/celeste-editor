@@ -17,14 +17,14 @@ public class EditingPanel extends JPanel {
 	
 	public TilesTab tiles = new TilesTab();
 	
-	public EntitiesTab entities = new EntitiesTab();
+	public PlacementsTab placements = new PlacementsTab();
 	
 	public JPanel selection = new JPanel();
 	
 	public EditingPanel() {
 		setLayout(new BorderLayout());
 		tabbedPane.addTab("Tiles", tiles);
-		tabbedPane.addTab("Entities", entities);
+		tabbedPane.addTab("Placements", placements);
 		tabbedPane.addTab("Selection", selection);
 		add(tabbedPane);
 	}
@@ -33,7 +33,7 @@ public class EditingPanel extends JPanel {
 		if(Main.editingPanel.tabbedPane.getSelectedComponent() == tiles) {
 			return EditPanel.Tiles;
 		}
-		if(Main.editingPanel.tabbedPane.getSelectedComponent() == entities) {
+		if(Main.editingPanel.tabbedPane.getSelectedComponent() == placements) {
 			return EditPanel.Entities;
 		}
 		

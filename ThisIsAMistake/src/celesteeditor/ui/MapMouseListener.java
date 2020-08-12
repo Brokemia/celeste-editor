@@ -15,6 +15,7 @@ import celesteeditor.data.Entity;
 import celesteeditor.data.Level;
 import celesteeditor.data.ListLevelLayer;
 import celesteeditor.editing.EntityConfig;
+import celesteeditor.editing.PlacementConfig.PlacementType;
 import celesteeditor.editing.TileTool.MouseAction;
 import celesteeditor.ui.EditingPanel.EditPanel;
 
@@ -84,28 +85,35 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 
 	@Override
 	public void mouseClicked(MouseEvent e) {
-		if(Main.editingPanel.getCurrentPanel() == EditPanel.Entities && !Main.editingPanel.entities.entityList.isSelectionEmpty() && e.getButton() == MouseEvent.BUTTON1) {
+		if(Main.editingPanel.getCurrentPanel() == EditPanel.Entities && Main.editingPanel.placements.isPlacementSelected() && e.getButton() == MouseEvent.BUTTON1) {
 			if(Main.loadedMap != null) {
 				for(Level level : Main.loadedMap.levels) {
 					Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
 					if(lBounds.contains(e.getPoint())) {
-						panel.selectedLevel = level;
 						panel.selectedEntity = null;
 						panel.selectedDecal = null;
 						panel.selectedNode = -1;
 						
-						Entity entity = Entity.fromPlacementConfig(EntitiesTab.placementConfig.get(Main.editingPanel.entities.entityList.getSelectedValue()));
-						Point coords = new Point((int)((e.getPoint().x -  lBounds.x) / panel.getActualZoom()), (int)((e.getPoint().y - lBounds.y) / panel.getActualZoom()));
-						// Snap to grid if not holding ctrl
-						if(!Main.mapPanel.ctrlPressed) {
-							coords.x /= 8;
-							coords.y /= 8;
-							coords.x *= 8;
-							coords.y *= 8;
+						if(panel.selectedLevel == level) {
+							Entity entity = Entity.fromPlacementConfig(PlacementsTab.placementConfig.get((Main.editingPanel.placements.getCurrentPlacementType() == PlacementType.Entity ? Main.editingPanel.placements.entityList : Main.editingPanel.placements.triggerList).getSelectedValue()));
+							Point coords = new Point((int)((e.getPoint().x -  lBounds.x) / panel.getActualZoom()), (int)((e.getPoint().y - lBounds.y) / panel.getActualZoom()));
+							// Snap to grid if not holding ctrl
+							if(!Main.mapPanel.ctrlPressed) {
+								coords.x /= 8;
+								coords.y /= 8;
+								coords.x *= 8;
+								coords.y *= 8;
+							}
+							entity.x = coords.x;
+							entity.y = coords.y;
+							if(Main.editingPanel.placements.getCurrentPlacementType() == PlacementType.Entity) {
+								level.entities.items.add(entity);
+							} else if(Main.editingPanel.placements.getCurrentPlacementType() == PlacementType.Trigger) {
+								level.triggers.items.add(entity);
+							}
 						}
-						entity.x = coords.x;
-						entity.y = coords.y;
-						panel.selectedLevel.entities.items.add(entity);
+						panel.selectedLevel = level;
+						
 						return;
 					}
 				}
@@ -179,25 +187,27 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 					
 					Decal decalOpenPopupFor = null;
 					done = false;
-					for(ListLevelLayer decals : new ListLevelLayer[] {level.bgDecals, level.fgDecals} ) {  
-						for(int i = 0; i < decals.items.size(); i++) {
-							Decal decal = (Decal)decals.items.get(i);
-							BufferedImage img = decal.getImage();
-							Rectangle dBounds = new Rectangle((int)((level.bounds.x + decal.x - img.getWidth() / 2 * Math.abs(decal.scaleX) + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + decal.y - img.getHeight() / 2 * Math.abs(decal.scaleY) + panel.offset.y) * panel.getActualZoom()), (int)(img.getWidth() * Math.abs(decal.scaleX) * panel.getActualZoom()), (int)(img.getHeight() * Math.abs(decal.scaleY) * panel.getActualZoom()));
-							
-							if(dBounds.contains(e.getPoint())) {
-								switch(e.getButton()) {
-								case MouseEvent.BUTTON1:
-									panel.selectedLevel = level;
-									panel.selectedEntity = null;
-									panel.selectedDecal = decal;
-									panel.selectedNode = -1;
-									done = true;
-									break;
-								case MouseEvent.BUTTON3:
-									decalOpenPopupFor = decal;
-									done = true;
-									break;
+					for(ListLevelLayer decals : new ListLevelLayer[] {level.bgDecals, level.fgDecals} ) {
+						if(decals != null) {
+							for(int i = 0; i < decals.items.size(); i++) {
+								Decal decal = (Decal)decals.items.get(i);
+								BufferedImage img = decal.getImage();
+								Rectangle dBounds = new Rectangle((int)((level.bounds.x + decal.x - img.getWidth() / 2 * Math.abs(decal.scaleX) + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + decal.y - img.getHeight() / 2 * Math.abs(decal.scaleY) + panel.offset.y) * panel.getActualZoom()), (int)(img.getWidth() * Math.abs(decal.scaleX) * panel.getActualZoom()), (int)(img.getHeight() * Math.abs(decal.scaleY) * panel.getActualZoom()));
+								
+								if(dBounds.contains(e.getPoint())) {
+									switch(e.getButton()) {
+									case MouseEvent.BUTTON1:
+										panel.selectedLevel = level;
+										panel.selectedEntity = null;
+										panel.selectedDecal = decal;
+										panel.selectedNode = -1;
+										done = true;
+										break;
+									case MouseEvent.BUTTON3:
+										decalOpenPopupFor = decal;
+										done = true;
+										break;
+									}
 								}
 							}
 						}
@@ -279,7 +289,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 		}
 
 		if(button1Down && !panel.altPressed) {
-			if(Main.editingPanel.getCurrentPanel() == EditPanel.Selection || (Main.editingPanel.getCurrentPanel() == EditPanel.Entities && Main.editingPanel.entities.entityList.isSelectionEmpty())) {
+			if(Main.editingPanel.getCurrentPanel() == EditPanel.Selection || (Main.editingPanel.getCurrentPanel() == EditPanel.Entities && !Main.editingPanel.placements.isPlacementSelected())) {
 				if(panel.selectedEntity != null) {
 					int x = panel.selectedEntity.x;
 					int y = panel.selectedEntity.y;

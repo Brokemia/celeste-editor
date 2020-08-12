@@ -25,7 +25,7 @@ import celesteeditor.editing.PlacementConfig;
 import celesteeditor.editing.PlacementConfig.PlacementType;
 import celesteeditor.util.Util;
 
-public class EntitiesTab extends JPanel {
+public class PlacementsTab extends JPanel {
 	
 	public static HashMap<String, PlacementConfig> placementConfig = new HashMap<>();
 	
@@ -35,16 +35,19 @@ public class EntitiesTab extends JPanel {
 	
 	JList<String> entityList = new JList<>();
 	
+	JList<String> triggerList = new JList<>();
+	
 	JPanel triggers = new JPanel();
 	
 	JPopupMenu rightClickEntity = new JPopupMenu();
 
-	public EntitiesTab() {
+	public PlacementsTab() {
 		setLayout(new BorderLayout());
 		tabbedPane.addTab("Entities", entities);
 		tabbedPane.addTab("Triggers", triggers);
 		add(tabbedPane);
 		
+		// Entities
 		entities.setLayout(new BorderLayout());
 		JLabel addTool = new JLabel(new ImageIcon(Util.getImage("/assets/add.png")));
 		addTool.addMouseListener(new MouseAdapter() {
@@ -60,12 +63,31 @@ public class EntitiesTab extends JPanel {
 		entityList.setLayoutOrientation(JList.VERTICAL);
 		JScrollPane scrollPane = new JScrollPane(entityList);
 		entities.add(scrollPane);
+		
+		// Triggers
+		triggers.setLayout(new BorderLayout());
+		addTool = new JLabel(new ImageIcon(Util.getImage("/assets/add.png")));
+		addTool.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				PlacementConfigPopup popup = new PlacementConfigPopup(null, PlacementType.Trigger);
+				popup.setVisible(true);
+			}
+		});
+		addTool.addMouseListener(new ColoredHoverListener(addTool));
+		triggers.add(addTool, BorderLayout.NORTH);
+		
+		triggerList.setLayoutOrientation(JList.VERTICAL);
+		scrollPane = new JScrollPane(triggerList);
+		triggers.add(scrollPane);
+		
 		refreshLists();
 		setupRightClickMenu();
 	}
 	
 	public void refreshLists() {
 		entityList.setListData(placementConfig.entrySet().stream().filter((e) -> e.getValue().placementType == PlacementType.Entity).map((e) -> e.getValue().name).toArray(String[]::new));
+		triggerList.setListData(placementConfig.entrySet().stream().filter((e) -> e.getValue().placementType == PlacementType.Trigger).map((e) -> e.getValue().name).toArray(String[]::new));
 		revalidate();
 	}
 	
@@ -74,9 +96,10 @@ public class EntitiesTab extends JPanel {
 		edit.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String name = entityList.getSelectedValue();
+				String name = (getCurrentPlacementType() == PlacementType.Entity ? entityList : triggerList).getSelectedValue();
 				PlacementConfig config = placementConfig.get(name);
-				PlacementConfigPopup popup = new PlacementConfigPopup(config, PlacementType.Entity);
+				System.out.println(getCurrentPlacementType());
+				PlacementConfigPopup popup = new PlacementConfigPopup(config, getCurrentPlacementType());
 				popup.setVisible(true);
 			}
 		});
@@ -86,7 +109,7 @@ public class EntitiesTab extends JPanel {
 		delete.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String name = entityList.getSelectedValue();
+				String name = (getCurrentPlacementType() == PlacementType.Entity ? entityList : triggerList).getSelectedValue();
 				int result = JOptionPane.showConfirmDialog(Main.mainWindow, "Are you sure you want to delete \"" + name + "\"?", "Delete Placement",
 	               JOptionPane.YES_NO_OPTION,
 	               JOptionPane.QUESTION_MESSAGE);
@@ -113,6 +136,28 @@ public class EntitiesTab extends JPanel {
 	            }
 	        }
 	    });
+		
+		triggerList.addMouseListener( new MouseAdapter() {
+	        public void mousePressed(MouseEvent e) {
+	            if(SwingUtilities.isRightMouseButton(e)) {
+	            	triggerList.setSelectedIndex(triggerList.locationToIndex(e.getPoint()));
+	                rightClickEntity.show(triggerList, e.getX(), e.getY());
+	            }
+	        }
+	    });
+	}
+	
+	public PlacementType getCurrentPlacementType() {
+		if(tabbedPane.getSelectedComponent().equals(entities)) {
+			return PlacementType.Entity;
+		} else if(tabbedPane.getSelectedComponent().equals(triggers)) {
+			return PlacementType.Trigger;
+		}
+		return PlacementType.Decal;
+	}
+	
+	public boolean isPlacementSelected() {
+		return (getCurrentPlacementType() == PlacementType.Entity && !entityList.isSelectionEmpty()) || (getCurrentPlacementType() == PlacementType.Trigger && !triggerList.isSelectionEmpty());
 	}
 	
 	public static class ColoredHoverListener extends MouseAdapter {

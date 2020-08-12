@@ -20,7 +20,7 @@ import celesteeditor.editing.EntityConfig;
 import celesteeditor.editing.PlacementConfig;
 import celesteeditor.editing.Tiletype;
 import celesteeditor.ui.EditingPanel;
-import celesteeditor.ui.EntitiesTab;
+import celesteeditor.ui.PlacementsTab;
 import celesteeditor.ui.MapPanel;
 import celesteeditor.ui.TilesTab;
 
@@ -145,7 +145,7 @@ public class Main {
 		for(File config : folder.listFiles()) {
 			if(config.getPath().endsWith(".config")) {
 				PlacementConfig pc = PlacementConfig.fromFile(config);
-				EntitiesTab.placementConfig.put(pc.name, pc);
+				PlacementsTab.placementConfig.put(pc.name, pc);
 			}
 		}
 	}
@@ -159,6 +159,7 @@ public class Main {
 		splitPane.add(editingPanel = new EditingPanel());
 		mainWindow.add(splitPane);
 		mainWindow.setSize(Toolkit.getDefaultToolkit().getScreenSize());
+		mainWindow.setLocationRelativeTo(null);
 		mainWindow.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		mainWindow.setVisible(true);
 	}
