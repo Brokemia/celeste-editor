@@ -94,22 +94,36 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 						panel.selectedDecal = null;
 						panel.selectedNode = -1;
 						
+						Point coords = new Point((int)((e.getPoint().x -  lBounds.x) / panel.getActualZoom()), (int)((e.getPoint().y - lBounds.y) / panel.getActualZoom()));
+						// Snap to grid if not holding ctrl
+						if(!Main.mapPanel.ctrlPressed) {
+							coords.x /= 8;
+							coords.y /= 8;
+							coords.x *= 8;
+							coords.y *= 8;
+						}
+						
 						if(panel.selectedLevel == level) {
-							Entity entity = Entity.fromPlacementConfig(PlacementsTab.placementConfig.get((Main.editingPanel.placements.getCurrentPlacementType() == PlacementType.Entity ? Main.editingPanel.placements.entityList : Main.editingPanel.placements.triggerList).getSelectedValue()));
-							Point coords = new Point((int)((e.getPoint().x -  lBounds.x) / panel.getActualZoom()), (int)((e.getPoint().y - lBounds.y) / panel.getActualZoom()));
-							// Snap to grid if not holding ctrl
-							if(!Main.mapPanel.ctrlPressed) {
-								coords.x /= 8;
-								coords.y /= 8;
-								coords.x *= 8;
-								coords.y *= 8;
-							}
-							entity.x = coords.x;
-							entity.y = coords.y;
-							if(Main.editingPanel.placements.getCurrentPlacementType() == PlacementType.Entity) {
-								level.entities.items.add(entity);
-							} else if(Main.editingPanel.placements.getCurrentPlacementType() == PlacementType.Trigger) {
-								level.triggers.items.add(entity);
+							if(Main.editingPanel.placements.getCurrentPlacementType() == PlacementType.Decal) {
+								Decal decal = new Decal(Main.editingPanel.placements.decalList.getSelectedValue());
+								decal.x = coords.x;
+								decal.y = coords.y;
+								
+								if(Main.editingPanel.placements.decalFg.isSelected()) {
+									level.fgDecals.items.add(decal);
+								} else {
+									level.bgDecals.items.add(decal);
+								}
+							} else {
+								Entity entity = Entity.fromPlacementConfig(PlacementsTab.placementConfig.get((Main.editingPanel.placements.getCurrentPlacementType() == PlacementType.Entity ? Main.editingPanel.placements.entityList : Main.editingPanel.placements.triggerList).getSelectedValue()));
+								entity.x = coords.x;
+								entity.y = coords.y;
+								
+								if(Main.editingPanel.placements.getCurrentPlacementType() == PlacementType.Entity) {
+									level.entities.items.add(entity);
+								} else if(Main.editingPanel.placements.getCurrentPlacementType() == PlacementType.Trigger) {
+									level.triggers.items.add(entity);
+								}
 							}
 						}
 						panel.selectedLevel = level;

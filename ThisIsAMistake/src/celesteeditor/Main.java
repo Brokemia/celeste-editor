@@ -5,7 +5,6 @@ import java.awt.Toolkit;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
@@ -15,13 +14,14 @@ import javax.swing.JSplitPane;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import celesteeditor.BinaryPacker.Element;
+import celesteeditor.data.Decal;
 import celesteeditor.data.Map;
 import celesteeditor.editing.EntityConfig;
 import celesteeditor.editing.PlacementConfig;
 import celesteeditor.editing.Tiletype;
 import celesteeditor.ui.EditingPanel;
-import celesteeditor.ui.PlacementsTab;
 import celesteeditor.ui.MapPanel;
+import celesteeditor.ui.PlacementsTab;
 import celesteeditor.ui.TilesTab;
 
 public class Main {
@@ -61,6 +61,11 @@ public class Main {
 //				}
 //			}
 //		}
+		
+		File decalFolder = new File("bin/Atlases/Gameplay/decals");
+		if(decalFolder.exists()) {
+			Decal.loadDecalsFromFolder(decalFolder, "Atlases/Gameplay/decals", "");
+		}
 		
 		openMap();
 		loadConfig();

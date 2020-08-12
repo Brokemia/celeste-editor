@@ -10,6 +10,7 @@ import java.io.File;
 import java.util.HashMap;
 
 import javax.swing.ImageIcon;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenuItem;
@@ -21,6 +22,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
 
 import celesteeditor.Main;
+import celesteeditor.data.Decal;
 import celesteeditor.editing.PlacementConfig;
 import celesteeditor.editing.PlacementConfig.PlacementType;
 import celesteeditor.util.Util;
@@ -35,9 +37,15 @@ public class PlacementsTab extends JPanel {
 	
 	JList<String> entityList = new JList<>();
 	
+	JPanel triggers = new JPanel();
+	
 	JList<String> triggerList = new JList<>();
 	
-	JPanel triggers = new JPanel();
+	JPanel decals = new JPanel();
+	
+	JList<String> decalList = new JList<>();
+	
+	JCheckBox decalFg = new JCheckBox("Foreground");
 	
 	JPopupMenu rightClickEntity = new JPopupMenu();
 
@@ -45,6 +53,7 @@ public class PlacementsTab extends JPanel {
 		setLayout(new BorderLayout());
 		tabbedPane.addTab("Entities", entities);
 		tabbedPane.addTab("Triggers", triggers);
+		tabbedPane.addTab("Decals", decals);
 		add(tabbedPane);
 		
 		// Entities
@@ -81,6 +90,14 @@ public class PlacementsTab extends JPanel {
 		scrollPane = new JScrollPane(triggerList);
 		triggers.add(scrollPane);
 		
+		// Decals
+		decals.setLayout(new BorderLayout());
+		decals.add(decalFg, BorderLayout.NORTH);
+		
+		decalList.setLayoutOrientation(JList.VERTICAL);
+		scrollPane = new JScrollPane(decalList);
+		decals.add(scrollPane);
+		
 		refreshLists();
 		setupRightClickMenu();
 	}
@@ -88,6 +105,7 @@ public class PlacementsTab extends JPanel {
 	public void refreshLists() {
 		entityList.setListData(placementConfig.entrySet().stream().filter((e) -> e.getValue().placementType == PlacementType.Entity).map((e) -> e.getValue().name).toArray(String[]::new));
 		triggerList.setListData(placementConfig.entrySet().stream().filter((e) -> e.getValue().placementType == PlacementType.Trigger).map((e) -> e.getValue().name).toArray(String[]::new));
+		decalList.setListData(Decal.decalLocations.keySet().toArray(new String[Decal.decalLocations.size()]));
 		revalidate();
 	}
 	
@@ -152,12 +170,14 @@ public class PlacementsTab extends JPanel {
 			return PlacementType.Entity;
 		} else if(tabbedPane.getSelectedComponent().equals(triggers)) {
 			return PlacementType.Trigger;
+		} else if(tabbedPane.getSelectedComponent().equals(decals)) {
+			return PlacementType.Decal;
 		}
-		return PlacementType.Decal;
+		return PlacementType.Entity;
 	}
 	
 	public boolean isPlacementSelected() {
-		return (getCurrentPlacementType() == PlacementType.Entity && !entityList.isSelectionEmpty()) || (getCurrentPlacementType() == PlacementType.Trigger && !triggerList.isSelectionEmpty());
+		return (getCurrentPlacementType() == PlacementType.Entity && !entityList.isSelectionEmpty()) || (getCurrentPlacementType() == PlacementType.Trigger && !triggerList.isSelectionEmpty()) || (getCurrentPlacementType() == PlacementType.Decal && !decalList.isSelectionEmpty());
 	}
 	
 	public static class ColoredHoverListener extends MouseAdapter {

@@ -13,15 +13,8 @@ public class Decal implements ElementEncoded {
 	 * Maps the decal texture paths to their actual location (in the mods folder or graphics)
 	 */
 	public static HashMap<String, String> decalLocations = new HashMap<>();
-	
-	static {
-		File decalFolder = new File("bin/Atlases/Gameplay/decals");
-		if(decalFolder.exists()) {
-			loadDecalsFromFolder(decalFolder, "Atlases/Gameplay/decals", "");
-		}
-	}
-	
-	private static void loadDecalsFromFolder(File folder, String prefix, String subfolders) {
+
+	public static void loadDecalsFromFolder(File folder, String prefix, String subfolders) {
 		for(File decal : folder.listFiles()) {
 			if(decal.isDirectory()) {
 				loadDecalsFromFolder(decal, prefix, subfolders + "\\" + decal.getName());
@@ -39,6 +32,12 @@ public class Decal implements ElementEncoded {
 	private String texture;
 	
 	private BufferedImage image;
+	
+	public Decal(String tex) {
+		setTexture(tex);
+	}
+	
+	public Decal() {}
 	
 	public String getTexturePath() {
 		return texture;
