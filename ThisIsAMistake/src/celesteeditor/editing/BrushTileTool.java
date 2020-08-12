@@ -12,7 +12,7 @@ public class BrushTileTool extends TileTool {
 
 	@Override
 	public void drawAt(char[][] tileMap, Tiletype tileType, Point p, MouseAction action) {
-		tileMap[p.y][p.x] = tileType.tile;
+		placeTile(tileMap, tileType, p);
 	}
 
 	@Override

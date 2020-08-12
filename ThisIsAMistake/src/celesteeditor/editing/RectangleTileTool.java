@@ -5,6 +5,8 @@ import java.util.Arrays;
 
 import javax.swing.Icon;
 
+import celesteeditor.Main;
+
 public class RectangleTileTool extends TileTool {
 	
 	Point rectStart;
@@ -33,9 +35,9 @@ public class RectangleTileTool extends TileTool {
 			if(rectStart != null) {
 				Point topLeft = new Point(Math.min(p.x, rectStart.x), Math.min(p.y, rectStart.y));
 				Point bottomRight = new Point(Math.max(p.x, rectStart.x), Math.max(p.y, rectStart.y));
-				for(int i = topLeft.y; i <= bottomRight.y && i < tileMap.length; i++) {
-					for(int j = topLeft.x; j <= bottomRight.x && j < tileMap[i].length; j++) {
-						tileMap[i][j] = tileType.tile;
+				for(int i = topLeft.y; i <= bottomRight.y && i < Main.mapPanel.selectedLevel.bounds.height; i++) {
+					for(int j = topLeft.x; j <= bottomRight.x && j < Main.mapPanel.selectedLevel.bounds.width; j++) {
+						placeTile(tileMap, tileType, new Point(j, i));
 					}
 				}
 			}

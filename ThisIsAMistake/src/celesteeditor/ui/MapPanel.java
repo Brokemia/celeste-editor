@@ -355,7 +355,7 @@ public class MapPanel extends JPanel {
 				if(tileOverlay != null && tileOverlayPos != null && Main.editingPanel.tiles.selectedTiletype != null) {
 					for(int i = 0; i < tileOverlay.length; i++) {
 						for(int j = 0; j < tileOverlay[i].length; j++) {
-							if(i + tileOverlayPos.y >= 0 && j + tileOverlayPos.x >= 0 && i + tileOverlayPos.y < level.solids.tileMap.length && j + tileOverlayPos.x < level.solids.tileMap[i + tileOverlayPos.y].length) {
+							if(i + tileOverlayPos.y >= 0 && j + tileOverlayPos.x >= 0 && i + tileOverlayPos.y < level.bounds.height / 8 && j + tileOverlayPos.x < level.bounds.width / 8) {
 								if(tileOverlay[i][j]) {
 									g.setColor(Main.editingPanel.tiles.selectedTiletype.color);
 									g.fillRect(level.bounds.x + (j + tileOverlayPos.x) * 8, level.bounds.y + (i + tileOverlayPos.y) * 8, 8, 8);
