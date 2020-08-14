@@ -1,5 +1,6 @@
 package celesteeditor.ui;
 
+import java.awt.Cursor;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
@@ -8,9 +9,11 @@ import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferedImage;
+import java.util.Arrays;
 
 import celesteeditor.Main;
 import celesteeditor.data.Decal;
+import celesteeditor.data.ElementEncoded;
 import celesteeditor.data.Entity;
 import celesteeditor.data.Level;
 import celesteeditor.data.ListLevelLayer;
@@ -18,6 +21,7 @@ import celesteeditor.editing.EntityConfig;
 import celesteeditor.editing.PlacementConfig.PlacementType;
 import celesteeditor.editing.TileTool.MouseAction;
 import celesteeditor.ui.EditingPanel.EditPanel;
+import celesteeditor.ui.MapPanel.LevelEdge;
 
 public class MapMouseListener implements MouseListener, MouseMotionListener, MouseWheelListener {
 	
@@ -56,6 +60,39 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 			}
 		} else {
 			panel.draggingEntity = false;
+			if(button1Down && Main.editingPanel.getCurrentPanel() == EditPanel.Selection) {
+				Rectangle lBounds = new Rectangle((int)((panel.selectedLevel.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((panel.selectedLevel.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(panel.selectedLevel.bounds.width * panel.getActualZoom()), (int)(panel.selectedLevel.bounds.height * panel.getActualZoom()));
+				Point tileCoords = new Point((int)((e.getPoint().x -  lBounds.x) / panel.getActualZoom() / 8), (int)((e.getPoint().y - lBounds.y) / panel.getActualZoom() / 8));
+				
+				switch(panel.selectedEdge) {
+				case Left:
+					if(tileCoords.x >= panel.selectedLevel.bounds.width / 8) {
+						tileCoords.x = panel.selectedLevel.bounds.width / 8 - 1;
+					}
+					panel.selectedEdgeOffset = tileCoords.x;
+					break;
+				case Right:
+					if(tileCoords.x < 1) {
+						tileCoords.x = 1;
+					}
+					panel.selectedEdgeOffset = tileCoords.x - panel.selectedLevel.bounds.width / 8;
+					break;
+				case Top:
+					if(tileCoords.y >= panel.selectedLevel.bounds.height / 8) {
+						tileCoords.y = panel.selectedLevel.bounds.height / 8 - 1;
+					}
+					panel.selectedEdgeOffset = tileCoords.y;
+					break;
+				case Bottom:
+					if(tileCoords.y < 1) {
+						tileCoords.y = 1;
+					}
+					panel.selectedEdgeOffset = tileCoords.y - panel.selectedLevel.bounds.height / 8;
+					break;
+				case None:
+					break;
+				}
+			}
 		}
 		
 		if(button3Down || (button1Down && panel.altPressed && !panel.draggingEntity)) {
@@ -68,16 +105,30 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 
 	@Override
 	public void mouseMoved(MouseEvent e) {
-		if(Main.editingPanel.tiles.selectedTileTool != null && Main.loadedMap != null) {
+		boolean mouseSet = false;
+		if(Main.loadedMap != null) {
 			for(Level level : Main.loadedMap.levels) {
 				Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
-				if(lBounds.contains(e.getPoint())) {
+				if(lBounds.contains(e.getPoint()) && Main.editingPanel.tiles.selectedTileTool != null) {
 					if(level == panel.selectedLevel) {
 						Main.editingPanel.tiles.selectedTileTool.lastMousePos = new Point((int)((e.getPoint().x -  lBounds.x) / panel.getActualZoom() / 8), (int)((e.getPoint().y - lBounds.y) / panel.getActualZoom() / 8));
 					} else {
 						Main.editingPanel.tiles.selectedTileTool.lastMousePos = null;
 					}
 				}
+				if(Main.editingPanel.getCurrentPanel() == EditPanel.Selection && !mouseSet) {
+					if(new Rectangle(lBounds.x - 4, lBounds.y, 8, lBounds.height).contains(e.getPoint()) || new Rectangle(lBounds.x + lBounds.width - 4, lBounds.y, 8, lBounds.height).contains(e.getPoint())) {
+						Main.mapPanel.setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
+						mouseSet = true;
+					} else if(new Rectangle(lBounds.x, lBounds.y - 4, lBounds.width, 8).contains(e.getPoint()) || new Rectangle(lBounds.x, lBounds.y + lBounds.height - 4, lBounds.width, 8).contains(e.getPoint())) {
+						Main.mapPanel.setCursor(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR));
+						mouseSet = true;
+					}
+				}
+			}
+			
+			if(!mouseSet) {
+				Main.mapPanel.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			}
 			
 		}
@@ -330,6 +381,32 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 						dragStart.translate(-panel.selectedDecal.x, -panel.selectedDecal.y);
 					}
 				}
+				
+				if(!panel.draggingEntity && Main.editingPanel.getCurrentPanel() == EditPanel.Selection) {
+					if(Main.loadedMap != null) {
+						for(Level level : Main.loadedMap.levels) {
+							Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
+							if(new Rectangle(lBounds.x - 4, lBounds.y, 8, lBounds.height).contains(e.getPoint())) {
+								Main.mapPanel.selectedEdge = LevelEdge.Left;
+							} else if(new Rectangle(lBounds.x + lBounds.width - 4, lBounds.y, 8, lBounds.height).contains(e.getPoint())) {
+								Main.mapPanel.selectedEdge = LevelEdge.Right;
+							} else if(new Rectangle(lBounds.x, lBounds.y - 4, lBounds.width, 8).contains(e.getPoint())) {
+								Main.mapPanel.selectedEdge = LevelEdge.Top;
+							} else if(new Rectangle(lBounds.x, lBounds.y + lBounds.height - 4, lBounds.width, 8).contains(e.getPoint())) {
+								Main.mapPanel.selectedEdge = LevelEdge.Bottom;
+							} else {
+								Main.mapPanel.selectedEdge = LevelEdge.None;
+							}
+							
+							if(Main.mapPanel.selectedEdge != LevelEdge.None) {
+								if(panel.selectedLevel != level) {
+									panel.selectedLevel = level;
+								}
+								return;
+							}
+						}
+					}
+				}
 			} else if(Main.editingPanel.getCurrentPanel() == EditPanel.Tiles && Main.loadedMap != null) {
 				placeTile(e.getPoint(), MouseAction.PRESSED);
 			}
@@ -358,6 +435,152 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 		
 		if(Main.editingPanel.getCurrentPanel() == EditPanel.Tiles && Main.loadedMap != null) {
 			placeTile(e.getPoint(), MouseAction.RELEASED);
+		} else if(Main.mapPanel.selectedEdgeOffset != 0) {
+			switch(Main.mapPanel.selectedEdge) {
+			case Right:
+				panel.selectedLevel.bounds.width += Main.mapPanel.selectedEdgeOffset * 8;
+			    for(int i = 0; i < panel.selectedLevel.solids.tileMap.length; i++) {
+			    	if(panel.selectedLevel.solids.tileMap[i].length > panel.selectedLevel.bounds.width / 8) {
+			    		panel.selectedLevel.solids.tileMap[i] = Arrays.copyOf(panel.selectedLevel.solids.tileMap[i], panel.selectedLevel.bounds.width / 8);
+			    	}
+		    	}
+			    for(int i = 0; i < panel.selectedLevel.bg.tileMap.length; i++) {
+			    	if(panel.selectedLevel.bg.tileMap[i].length > panel.selectedLevel.bounds.width / 8) {
+			    		panel.selectedLevel.bg.tileMap[i] = Arrays.copyOf(panel.selectedLevel.bg.tileMap[i], panel.selectedLevel.bounds.width / 8);
+			    	}
+		    	}
+				break;
+			case Bottom:
+				panel.selectedLevel.bounds.height += Main.mapPanel.selectedEdgeOffset * 8;
+				char[][] newSolids = Arrays.copyOf(panel.selectedLevel.solids.tileMap, panel.selectedLevel.bounds.height / 8);
+			    for(int i = panel.selectedLevel.solids.tileMap.length; i < panel.selectedLevel.bounds.height / 8; i++) {
+			    	newSolids[i] = new char[0];
+			    }
+				panel.selectedLevel.solids.tileMap = newSolids;
+				
+				char[][] newBg = Arrays.copyOf(panel.selectedLevel.bg.tileMap, panel.selectedLevel.bounds.height / 8);
+			    for(int i = panel.selectedLevel.bg.tileMap.length; i < panel.selectedLevel.bounds.height / 8; i++) {
+			    	newBg[i] = new char[0];
+			    }
+				panel.selectedLevel.bg.tileMap = newBg;
+				break;
+			case Top:
+				panel.selectedLevel.bounds.y += Main.mapPanel.selectedEdgeOffset * 8;
+				panel.selectedLevel.bounds.height -= Main.mapPanel.selectedEdgeOffset * 8;
+				if(Main.mapPanel.selectedEdgeOffset < 0) {
+					newSolids = Arrays.copyOf(panel.selectedLevel.solids.tileMap, panel.selectedLevel.bounds.height / 8);
+				    for(int i = newSolids.length + Main.mapPanel.selectedEdgeOffset - 1; i >= 0; i--) {
+				    	newSolids[i - Main.mapPanel.selectedEdgeOffset] = newSolids[i];
+				    }
+				    for(int i = 0; i < -Main.mapPanel.selectedEdgeOffset; i++) {
+				    	newSolids[i] = new char[0];
+				    }
+					panel.selectedLevel.solids.tileMap = newSolids;
+					
+					newBg = Arrays.copyOf(panel.selectedLevel.bg.tileMap, panel.selectedLevel.bounds.height / 8);
+				    for(int i = newBg.length + Main.mapPanel.selectedEdgeOffset - 1; i >= 0; i--) {
+				    	newBg[i - Main.mapPanel.selectedEdgeOffset] = newBg[i];
+				    }
+				    for(int i = 0; i < -Main.mapPanel.selectedEdgeOffset; i++) {
+				    	newBg[i] = new char[0];
+				    }
+					panel.selectedLevel.bg.tileMap = newBg;
+				} else {
+				    for(int i = Main.mapPanel.selectedEdgeOffset; i < panel.selectedLevel.solids.tileMap.length; i++) {
+				    	panel.selectedLevel.solids.tileMap[i - Main.mapPanel.selectedEdgeOffset] = panel.selectedLevel.solids.tileMap[i];
+				    }
+					panel.selectedLevel.solids.tileMap = Arrays.copyOf(panel.selectedLevel.solids.tileMap, panel.selectedLevel.bounds.height / 8);
+					
+					for(int i = Main.mapPanel.selectedEdgeOffset; i < panel.selectedLevel.bg.tileMap.length; i++) {
+				    	panel.selectedLevel.bg.tileMap[i - Main.mapPanel.selectedEdgeOffset] = panel.selectedLevel.bg.tileMap[i];
+				    }
+					panel.selectedLevel.bg.tileMap = Arrays.copyOf(panel.selectedLevel.bg.tileMap, panel.selectedLevel.bounds.height / 8);
+				}
+				
+				for(ElementEncoded ee : panel.selectedLevel.triggers.items) {
+					Entity t = (Entity) ee;
+					t.y -= Main.mapPanel.selectedEdgeOffset * 8;
+				}
+				for(ElementEncoded ee : panel.selectedLevel.entities.items) {
+					Entity entity = (Entity) ee;
+					entity.y -= Main.mapPanel.selectedEdgeOffset * 8;
+				}
+				for(ElementEncoded ee : panel.selectedLevel.fgDecals.items) {
+					Decal d = (Decal) ee;
+					d.y -= Main.mapPanel.selectedEdgeOffset * 8;
+				}
+				for(ElementEncoded ee : panel.selectedLevel.bgDecals.items) {
+					Decal d = (Decal) ee;
+					d.y -= Main.mapPanel.selectedEdgeOffset * 8;
+				}
+				break;
+			case Left:
+				panel.selectedLevel.bounds.x += Main.mapPanel.selectedEdgeOffset * 8;
+				panel.selectedLevel.bounds.width -= Main.mapPanel.selectedEdgeOffset * 8;
+				if(Main.mapPanel.selectedEdgeOffset < 0) {
+					for(int i = 0; i < panel.selectedLevel.solids.tileMap.length; i++) {
+						if(panel.selectedLevel.solids.tileMap[i].length > 0) {
+							panel.selectedLevel.solids.tileMap[i] = Arrays.copyOf(panel.selectedLevel.solids.tileMap[i], panel.selectedLevel.bounds.width / 8);
+							// Shift the row over
+							for(int j = panel.selectedLevel.bounds.width / 8 + Main.mapPanel.selectedEdgeOffset - 1; j >= 0; j--) {
+								panel.selectedLevel.solids.tileMap[i][j - Main.mapPanel.selectedEdgeOffset] = panel.selectedLevel.solids.tileMap[i][j];
+								panel.selectedLevel.solids.tileMap[i][j] = 0;
+							}
+						}
+					}
+					for(int i = 0; i < panel.selectedLevel.bg.tileMap.length; i++) {
+						if(panel.selectedLevel.bg.tileMap[i].length > 0) {
+							panel.selectedLevel.bg.tileMap[i] = Arrays.copyOf(panel.selectedLevel.bg.tileMap[i], panel.selectedLevel.bounds.width / 8);
+							// Shift the row over
+							for(int j = panel.selectedLevel.bounds.width / 8 + Main.mapPanel.selectedEdgeOffset - 1; j >= 0; j--) {
+								panel.selectedLevel.bg.tileMap[i][j - Main.mapPanel.selectedEdgeOffset] = panel.selectedLevel.bg.tileMap[i][j];
+								panel.selectedLevel.bg.tileMap[i][j] = 0;
+							}
+						}
+					}
+				} else {
+					for(int i = 0; i < panel.selectedLevel.solids.tileMap.length; i++) {
+						if(panel.selectedLevel.solids.tileMap[i].length > 0) {
+							// Shift the row over
+							for(int j = Main.mapPanel.selectedEdgeOffset; j < panel.selectedLevel.solids.tileMap[i].length; j++) {
+								panel.selectedLevel.solids.tileMap[i][j - Main.mapPanel.selectedEdgeOffset] = panel.selectedLevel.solids.tileMap[i][j];
+							}
+							panel.selectedLevel.solids.tileMap[i] = Arrays.copyOf(panel.selectedLevel.solids.tileMap[i], Math.max(0, panel.selectedLevel.bounds.width / 8));
+						}
+					}
+					for(int i = 0; i < panel.selectedLevel.bg.tileMap.length; i++) {
+						if(panel.selectedLevel.bg.tileMap[i].length > 0) {
+							// Shift the row over
+							for(int j = Main.mapPanel.selectedEdgeOffset; j < panel.selectedLevel.bg.tileMap[i].length; j++) {
+								panel.selectedLevel.bg.tileMap[i][j - Main.mapPanel.selectedEdgeOffset] = panel.selectedLevel.bg.tileMap[i][j];
+							}
+							panel.selectedLevel.bg.tileMap[i] = Arrays.copyOf(panel.selectedLevel.bg.tileMap[i], Math.max(0, panel.selectedLevel.bounds.width / 8));
+						}
+					}
+				}
+				
+				for(ElementEncoded ee : panel.selectedLevel.triggers.items) {
+					Entity t = (Entity) ee;
+					t.x -= Main.mapPanel.selectedEdgeOffset * 8;
+				}
+				for(ElementEncoded ee : panel.selectedLevel.entities.items) {
+					Entity entity = (Entity) ee;
+					entity.x -= Main.mapPanel.selectedEdgeOffset * 8;
+				}
+				for(ElementEncoded ee : panel.selectedLevel.fgDecals.items) {
+					Decal d = (Decal) ee;
+					d.x -= Main.mapPanel.selectedEdgeOffset * 8;
+				}
+				for(ElementEncoded ee : panel.selectedLevel.bgDecals.items) {
+					Decal d = (Decal) ee;
+					d.x -= Main.mapPanel.selectedEdgeOffset * 8;
+				}
+				break;
+			case None:
+				break;
+			}
+			Main.mapPanel.selectedEdgeOffset = 0;
+			Main.mapPanel.selectedEdge = LevelEdge.None;
 		}
 		
 		panel.draggingEntity = false;

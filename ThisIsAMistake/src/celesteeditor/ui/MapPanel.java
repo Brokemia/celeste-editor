@@ -12,7 +12,6 @@ import java.awt.Stroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,19 +24,22 @@ import javax.swing.KeyStroke;
 import com.text.TextAlignment;
 import com.text.TextRenderer;
 
-import celesteeditor.BinaryPacker;
 import celesteeditor.Main;
 import celesteeditor.data.Decal;
 import celesteeditor.data.Entity;
 import celesteeditor.data.Level;
 import celesteeditor.data.ListLevelLayer;
 import celesteeditor.editing.EntityConfig;
+import celesteeditor.editing.EntityConfig.VisualType;
 import celesteeditor.editing.Tiletype;
 import celesteeditor.ui.EditingPanel.EditPanel;
-import celesteeditor.editing.EntityConfig.VisualType;
 import celesteeditor.util.Util;
 
 public class MapPanel extends JPanel {
+	
+	public enum LevelEdge {
+		None, Left, Right, Top, Bottom
+	}
 		
 	public Point offset = new Point(0, 0);
 	
@@ -55,6 +57,10 @@ public class MapPanel extends JPanel {
 	public int selectedNode = -1;
 	
 	public Level selectedLevel;
+	
+	public LevelEdge selectedEdge = LevelEdge.None;
+	
+	public int selectedEdgeOffset;
 	
 	public boolean renderingComplete;
 	
@@ -367,6 +373,22 @@ public class MapPanel extends JPanel {
 				}
 			}
 			g.drawRect(level.bounds.x, level.bounds.y, level.bounds.width, level.bounds.height);
+			if(selectedLevel == level) {
+				switch(selectedEdge) {
+				case Left:
+					g.drawLine(level.bounds.x + selectedEdgeOffset * 8, level.bounds.y, level.bounds.x + selectedEdgeOffset * 8, level.bounds.y + level.bounds.height);
+					break;
+				case Right:
+					g.drawLine(level.bounds.x + level.bounds.width + selectedEdgeOffset * 8, level.bounds.y, level.bounds.x + level.bounds.width + selectedEdgeOffset * 8, level.bounds.y + level.bounds.height);
+					break;
+				case Top:
+					g.drawLine(level.bounds.x, level.bounds.y + selectedEdgeOffset * 8, level.bounds.x + level.bounds.width, level.bounds.y + selectedEdgeOffset * 8);
+					break;
+				case Bottom:
+					g.drawLine(level.bounds.x, level.bounds.y + level.bounds.height + selectedEdgeOffset * 8, level.bounds.x + level.bounds.width, level.bounds.y + level.bounds.height + selectedEdgeOffset * 8);
+					break;
+				}
+			}
 		}
 	}
 	
