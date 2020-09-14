@@ -177,7 +177,6 @@ public class BinaryPacker {
         addLookupValue(element.Name);
         if(element.Attributes != null) {
 	        for (Entry<String, Object> entry : element.Attributes.entrySet()) {
-	        	System.out.println(entry.getKey());
 	        	if(!IgnoreAttributes.contains(entry.getKey()) && !entry.getKey().equals(InnerTextAttributeName) && entry.getValue().toString().length() > 0) {
 	                addLookupValue(entry.getKey());
 	                AttributeValue val = getAttr(entry.getValue());
@@ -242,7 +241,7 @@ public class BinaryPacker {
 	        }
 	        if (element.Attr(InnerTextAttributeName).length() > 0) {
 	            outStream.writeShort(stringValue.get(InnerTextAttributeName));
-	            if (element.Name == "solids" || element.Name == "bg") {
+	            if (element.Name.equals("solids") || element.Name.equals("bg")) {
 	                byte[] array = RunLengthEncoding.encode(element.Attr(InnerTextAttributeName));
 	                outStream.writeByte((byte)7);
 	                outStream.writeShort((short)array.length);
@@ -290,36 +289,6 @@ public class BinaryPacker {
         	res = new AttributeValue();
             res.type = 5;
             res.value = val.toString();
-        }
-        return res;
-    }
-
-    private static AttributeValue parseValue(String value) {
-    	AttributeValue res = null;
-        if (value.equalsIgnoreCase(Boolean.TRUE.toString()) || value.equalsIgnoreCase(Boolean.FALSE.toString())) {
-        	res = new AttributeValue();
-        	res.type = 0;
-            res.value = Boolean.parseBoolean(value);
-        } else if(tryParseByte(value) && Byte.parseByte(value) >= 0) {
-        	res = new AttributeValue();
-            res.type = 1;
-            res.value = Byte.parseByte(value);
-        } else if (tryParseShort(value)) {
-        	res = new AttributeValue();
-            res.type = 2;
-            res.value = Short.parseShort(value);
-        } else if (tryParseInt(value)) {
-        	res = new AttributeValue();
-            res.type = 3;
-            res.value = Integer.parseInt(value);
-        } else if (tryParseFloat(value)) {
-        	res = new AttributeValue();
-            res.type = 4;
-            res.value = Float.parseFloat(value.trim());
-        } else {
-        	res = new AttributeValue();
-            res.type = 5;
-            res.value = value;
         }
         return res;
     }

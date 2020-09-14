@@ -222,9 +222,6 @@ public class MapPanel extends JPanel {
 			for(int i = 0; i < tiles.length; i++) {
 				for(int j = 0; j < tiles[i].length; j++) {
 					char tile = tiles[i][j];
-					if(tile != ' ' && tile != 0) {
-						//System.out.println(tile);
-					}
 					Tiletype type = tileTypes.stream().filter((t) -> t.tile == tile).findFirst().orElse(null);
 					g.setColor(type == null ? Color.pink : type.color);
 					if(type == null) System.out.println((fg ? "Fore" : "Back") + "ground tile " + tile + " not found");

@@ -116,7 +116,6 @@ public class PlacementsTab extends JPanel {
 			public void actionPerformed(ActionEvent e) {
 				String name = (getCurrentPlacementType() == PlacementType.Entity ? entityList : triggerList).getSelectedValue();
 				PlacementConfig config = placementConfig.get(name);
-				System.out.println(getCurrentPlacementType());
 				PlacementConfigPopup popup = new PlacementConfigPopup(config, getCurrentPlacementType());
 				popup.setVisible(true);
 			}

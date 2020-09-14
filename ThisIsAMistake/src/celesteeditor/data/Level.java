@@ -7,7 +7,7 @@ import java.util.HashMap;
 import celesteeditor.BinaryPacker.Element;
 
 public class Level implements ElementEncoded {
-	// No idea what this does
+	// Color of the room?
 	public int c;
 	
 	public String name = "";
@@ -44,7 +44,7 @@ public class Level implements ElementEncoded {
 	
 	public ListLevelLayer triggers;
 	
-	public TileLevelLayer fgTiles; // ignoring because Ahorn does
+	public IntTileLevelLayer fgTiles; // ignoring because Ahorn does
 	
 	public ListLevelLayer fgDecals;
 	
@@ -52,13 +52,13 @@ public class Level implements ElementEncoded {
 	
 	public ListLevelLayer entities;
 	
-	public TileLevelLayer bgTiles; // ignoring because Ahorn does
+	public IntTileLevelLayer bgTiles; // ignoring because Ahorn does
 	
 	public ListLevelLayer bgDecals;
 	
 	public TileLevelLayer bg;
 	
-	public TileLevelLayer objTiles; // TODO object tiles
+	public IntTileLevelLayer objTiles; // TODO object tiles
 	
 	@Override
 	public String toString() {
@@ -96,16 +96,17 @@ public class Level implements ElementEncoded {
 		res.Attributes.put("space", space);
 		
 		res.Children.add(triggers.asElement());
-		//res.Children.add(fgTiles.asElement());
+		res.Children.add(fgTiles.asElement());
 		if(fgDecals != null)
 			res.Children.add(fgDecals.asElement());
 		res.Children.add(solids.asElement());
 		res.Children.add(entities.asElement());
-		//res.Children.add(bgTiles.asElement());
+		res.Children.add(bgTiles.asElement());
 		if(bgDecals != null)
 			res.Children.add(bgDecals.asElement());
 		res.Children.add(bg.asElement());
-		//res.Children.add(objTiles.asElement()); TODO re-enable when fixed
+		if(objTiles != null)
+			res.Children.add(objTiles.asElement());
 		return res;
 	}
 
@@ -141,7 +142,7 @@ public class Level implements ElementEncoded {
 				triggers = new ListLevelLayer(Entity.class).fromElement(c);
 				break;
 			case "fgtiles":
-				fgTiles = new TileLevelLayer().fromElement(c);
+				fgTiles = new IntTileLevelLayer().fromElement(c);
 				break;
 			case "fgdecals":
 				fgDecals = new ListLevelLayer(Decal.class).fromElement(c);
@@ -153,7 +154,7 @@ public class Level implements ElementEncoded {
 				entities = new ListLevelLayer(Entity.class).fromElement(c);
 				break;
 			case "bgtiles":
-				bgTiles = new TileLevelLayer().fromElement(c);
+				bgTiles = new IntTileLevelLayer().fromElement(c);
 				break;
 			case "bgdecals":
 				bgDecals = new ListLevelLayer(Decal.class).fromElement(c);
@@ -162,7 +163,7 @@ public class Level implements ElementEncoded {
 				bg = new TileLevelLayer().fromElement(c);
 				break;
 			case "objtiles":
-				objTiles = new TileLevelLayer().fromElement(c);
+				objTiles = new IntTileLevelLayer().fromElement(c);
 				break;
 			default:
 				throw new RuntimeException("Unknown level layer found: " + c.Name);

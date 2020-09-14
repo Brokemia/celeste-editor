@@ -64,9 +64,7 @@ public static final int width = 450;
 		}
 		// Add width and height if missing
 		if(type == PlacementType.Trigger) {
-			System.out.println("EditingTrigger");
 			if(!config.defaultProperties.stream().anyMatch((ep) -> ep.name.equals("width"))) {
-				System.out.println("w");
 				config.defaultProperties.add(new EntityProperty("width", PropertyType.Integer, 8));
 			}
 			if(!config.defaultProperties.stream().anyMatch((ep) -> ep.name.equals("height"))) {
