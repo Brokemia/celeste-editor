@@ -60,7 +60,7 @@ public class Entity implements ElementEncoded {
 		}
 		// If there is no EntityConfig, it must be a trigger
 		if(ec == null || ec.visualType != VisualType.Image) {
-			return new Rectangle((int)((xPos + level.bounds.x + offset.x - (ec.visualType == VisualType.ImageBox ? ec.imgOffsetX : 0)) * zoom), (int)((yPos + level.bounds.y + offset.y - (ec.visualType == VisualType.ImageBox ? ec.imgOffsetY : 0)) * zoom), (int)(getPropertyValue("width", 8) * zoom), (int)(getPropertyValue("height", 8) * zoom));
+			return new Rectangle((int)((xPos + level.bounds.x + offset.x - (ec != null && ec.visualType == VisualType.ImageBox ? ec.imgOffsetX : 0)) * zoom), (int)((yPos + level.bounds.y + offset.y - (ec != null && ec.visualType == VisualType.ImageBox ? ec.imgOffsetY : 0)) * zoom), (int)(getPropertyValue("width", 8) * zoom), (int)(getPropertyValue("height", 8) * zoom));
 		} else {
 			return new Rectangle((int)((xPos + level.bounds.x - ec.imgOffsetX + offset.x) * zoom), (int)((yPos + level.bounds.y - ec.imgOffsetY + offset.y) * zoom), (int)((int)ec.getImage().getWidth() * zoom), (int)((int)ec.getImage().getHeight() * zoom));
 		}
