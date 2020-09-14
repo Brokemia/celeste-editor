@@ -101,13 +101,9 @@ public class EntityConfigPopup extends JFrame {
 					} else {
 						boxPanel.setVisible(false);
 						imgPanel.setVisible(true);
-						if(visualTypeBox.getSelectedItem().equals(VisualType.Image)) {
-							offsetXPanel.setVisible(true);
-							offsetYPanel.setVisible(true);
-						} else {
-							offsetXPanel.setVisible(false);
-							offsetYPanel.setVisible(false);
-						}
+						
+						offsetXPanel.setVisible(true);
+						offsetYPanel.setVisible(true);
 					}
 				}
 			}
@@ -120,13 +116,9 @@ public class EntityConfigPopup extends JFrame {
 		} else {
 			boxPanel.setVisible(false);
 			imgPanel.setVisible(true);
-			if(visualTypeBox.getSelectedItem().equals(VisualType.Image)) {
-				offsetXPanel.setVisible(true);
-				offsetYPanel.setVisible(true);
-			} else {
-				offsetXPanel.setVisible(false);
-				offsetYPanel.setVisible(false);
-			}
+			
+			offsetXPanel.setVisible(true);
+			offsetYPanel.setVisible(true);
 		}
 		
 		setSize(450, 200);

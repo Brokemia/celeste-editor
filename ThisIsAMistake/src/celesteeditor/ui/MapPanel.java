@@ -277,7 +277,7 @@ public class MapPanel extends JPanel {
 					
 					for(int j = 0; j < repY; j++) {
 						for(int k = 0; k < repX; k++) {
-							g.drawImage(ec.getImage(), e.x + level.bounds.x + k * img.getWidth(), e.y + level.bounds.y + j * img.getHeight(), null);
+							g.drawImage(ec.getImage(), e.x + level.bounds.x + k * img.getWidth() - ec.imgOffsetX, e.y + level.bounds.y + j * img.getHeight() - ec.imgOffsetY, null);
 						}
 					}
 				}
@@ -302,7 +302,7 @@ public class MapPanel extends JPanel {
 							
 							for(int j = 0; j < repY; j++) {
 								for(int k = 0; k < repX; k++) {
-									g.drawImage(ec.getImage(), e.x + level.bounds.x + k * img.getWidth(), e.y + level.bounds.y + j * img.getHeight(), null);
+									g.drawImage(ec.getImage(), e.x + level.bounds.x + k * img.getWidth() - ec.imgOffsetX, e.y + level.bounds.y + j * img.getHeight() - ec.imgOffsetY, null);
 								}
 							}
 						}
