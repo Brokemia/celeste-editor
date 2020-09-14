@@ -127,7 +127,7 @@ public class TilesTab extends JPanel {
 				if(tileFile.exists()) {
 					tileFile.delete();
 				}
-				if(EditTiletypePopup.currentPopup.tileType.equals(tt)) {
+				if(EditTiletypePopup.currentPopup != null && EditTiletypePopup.currentPopup.tileType.equals(tt)) {
 					EditTiletypePopup.currentPopup.dispose();
 				}
 				revalidate();
@@ -195,11 +195,13 @@ public class TilesTab extends JPanel {
 		b.addMouseListener(new TiletypeMouseListener(t, b));
 		if(t.fg) {
 			fgTiles.add(b);
-			((GridLayout)fgTiles.getLayout()).setRows(Math.max(Math.max(fgTileTypes.size(), bgTileTypes.size()), 10));
 		} else {
 			bgTiles.add(b);
-			((GridLayout)bgTiles.getLayout()).setRows(Math.max(Math.max(fgTileTypes.size(), bgTileTypes.size()), 10));
 		}
+		((GridLayout)fgTiles.getLayout()).setRows(Math.max(Math.max(fgTileTypes.size(), bgTileTypes.size()), 10));
+		fgTiles.revalidate();
+		((GridLayout)bgTiles.getLayout()).setRows(Math.max(Math.max(fgTileTypes.size(), bgTileTypes.size()), 10));
+		bgTiles.revalidate();
 	}
 	
 private class ToolMouseListener extends MouseAdapter {
