@@ -5,6 +5,7 @@ import java.awt.Toolkit;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
@@ -37,16 +38,16 @@ public class Main {
 	public static HashMap<String, EntityConfig> entityConfig = new HashMap<>();
 
 	public static void main(String[] args) throws FileNotFoundException, IOException {
-		//Element map = BinaryPacker.fromBinary("test_out.bin");
-		//System.setOut(new PrintStream(new File("test_out.txt")));
-		//printElement(map, "");
-		//Element levels = map.Children.stream().filter((Element e) -> e.Name.equals("levels")).findFirst().get();
-		//for(Element level : levels.Children) {
-			//printElement(level, "");
-		//}
-		//Map m = new Map().fromElement(map);
-		//System.out.println(m.toString());
-		
+//		Element map = BinaryPacker.fromBinary("test_out.bin");
+//		System.setOut(new PrintStream(new File("test_out.txt")));
+//		printElement(map, "");
+//		Element levels = map.Children.stream().filter((Element e) -> e.Name.equals("levels")).findFirst().get();
+//		for(Element level : levels.Children) {
+//			printElement(level, "");
+//		}
+//		Map m = new Map().fromElement(map);
+//		System.out.println(m.toString());
+//		
 //		File mapDir = new File("maps");
 //		for(File f : mapDir.listFiles()) {
 //			Element e = BinaryPacker.fromBinary(f.getAbsolutePath());

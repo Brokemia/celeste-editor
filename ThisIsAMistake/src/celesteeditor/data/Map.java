@@ -10,6 +10,8 @@ public class Map implements ElementEncoded {
 	
 	public String pkg;
 	
+	public Meta meta;
+	
 	public ArrayList<Rectangle> filler = new ArrayList<>();
 	
 	public ArrayList<Level> levels = new ArrayList<>();
@@ -87,6 +89,9 @@ public class Map implements ElementEncoded {
 			fg.Children.add(s.asElement());
 		}
 		res.Children.add(style);
+		if(meta != null) {
+			res.Children.add(meta.asElement());
+		}
 		
 		return res;
 	}
@@ -117,18 +122,24 @@ public class Map implements ElementEncoded {
 				if(c.HasAttr("color")) {
 					backgroundColor = c.Attr("color");
 				}
-				for(Element e : c.Children) {
-					ArrayList<Styleground> layer = e.Name.equals("Backgrounds") ? backgrounds : foregrounds;
-					for(Element s : e.Children) {
-						if(s.Name.equals("apply")) {
-							layer.add(new Styleground().fromElement(s));
-						} else if(s.Name.equals("parallax")) {
-							layer.add(new Parallax().fromElement(s));
-						} else {
-							layer.add(new Effect().fromElement(s));
+				if(c.Children != null) {
+					for(Element e : c.Children) {
+						ArrayList<Styleground> layer = e.Name.equals("Backgrounds") ? backgrounds : foregrounds;
+						if(e.Children != null) {
+							for(Element s : e.Children) {
+								if(s.Name.equals("apply")) {
+									layer.add(new Styleground().fromElement(s));
+								} else if(s.Name.equals("parallax")) {
+									layer.add(new Parallax().fromElement(s));
+								} else {
+									layer.add(new Effect().fromElement(s));
+								}
+							}
 						}
 					}
 				}
+			} else if(c.Name.equals("meta")) {
+				meta = new Meta().fromElement(c);
 			}
 		}
 		

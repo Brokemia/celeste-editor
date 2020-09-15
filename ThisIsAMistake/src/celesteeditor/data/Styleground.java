@@ -12,7 +12,7 @@ public class Styleground implements ElementEncoded {
 	
 	public String tag = "";
 	
-	public int x, y;
+	public float x, y;
 	
 	public float scrollX = 1, scrollY = 1;
 	
@@ -79,8 +79,8 @@ public class Styleground implements ElementEncoded {
 		notFlag = element.Attr("notflag");
 		alwaysIfFlag = element.Attr("always");
 		tag = element.Attr("tag");
-		x = element.AttrInt("x", 0);
-		y = element.AttrInt("y", 0);
+		x = element.AttrFloat("x", 0);
+		y = element.AttrFloat("y", 0);
 		scrollX = element.AttrFloat("scrollx");
 		scrollY = element.AttrFloat("scrolly");
 		speedX = element.AttrFloat("speedx", 0);

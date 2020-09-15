@@ -55,8 +55,8 @@ public class BinaryPacker {
 
         public String Attr(String name, String defaultValue) {
         	if (Attributes != null) {
-                return Attributes.getOrDefault(name, 
-                		Attributes.getOrDefault(name.toLowerCase(), defaultValue)).toString();
+        		Object val = Attributes.getOrDefault(name, Attributes.getOrDefault(name.toLowerCase(), defaultValue));
+                return val == null ? (String) val : val.toString();
         	}
             return defaultValue;
         }
