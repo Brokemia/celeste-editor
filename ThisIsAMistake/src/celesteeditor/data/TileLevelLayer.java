@@ -29,6 +29,7 @@ public class TileLevelLayer extends LevelLayer {
 			}
 		}
 		
+		
 		assert(tiles.equals(convertToTilestring(res)));
 		
 		return res;

@@ -4,6 +4,8 @@ import java.awt.Point;
 
 import javax.swing.Icon;
 
+import celesteeditor.data.TileLevelLayer;
+
 public class DummyTileTool extends TileTool {
 	
 	public DummyTileTool(Icon icon) {
@@ -11,7 +13,7 @@ public class DummyTileTool extends TileTool {
 	}
 
 	@Override
-	public void drawAt(char[][] tileMap, Tiletype tileType, Point p, MouseAction action) {
+	public void drawAt(TileLevelLayer tileLayer, Tiletype tileType, Point p, MouseAction action) {
 		
 	}
 

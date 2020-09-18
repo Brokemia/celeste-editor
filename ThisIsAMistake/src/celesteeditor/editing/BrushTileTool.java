@@ -4,6 +4,8 @@ import java.awt.Point;
 
 import javax.swing.Icon;
 
+import celesteeditor.data.TileLevelLayer;
+
 public class BrushTileTool extends TileTool {
 	
 	public BrushTileTool(Icon icon) {
@@ -11,8 +13,8 @@ public class BrushTileTool extends TileTool {
 	}
 
 	@Override
-	public void drawAt(char[][] tileMap, Tiletype tileType, Point p, MouseAction action) {
-		placeTile(tileMap, tileType, p);
+	public void drawAt(TileLevelLayer tileLayer, Tiletype tileType, Point p, MouseAction action) {
+		placeTile(tileLayer, tileType, p);
 	}
 
 	@Override

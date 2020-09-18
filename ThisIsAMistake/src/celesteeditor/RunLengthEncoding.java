@@ -27,7 +27,7 @@ public class RunLengthEncoding
 	public static String decode(byte[] bytes) {
 		String res = "";
 		for (int i = 0; i < bytes.length; i += 2) {
-			for(int j = 0; j < bytes[i]; j++) {
+			for(int j = 0; j < ((int)bytes[i] & 0xff); j++) {
 				res += (char)bytes[i + 1];
 			}
 		}

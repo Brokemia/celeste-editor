@@ -64,6 +64,10 @@ public class MapPanel extends JPanel {
 	
 	public boolean renderingComplete;
 	
+	public boolean firstDraw = true;
+	
+	public boolean redrawEverything = false;
+	
 	public boolean ctrlPressed;
 	
 	public boolean altPressed;
@@ -190,6 +194,21 @@ public class MapPanel extends JPanel {
 		g.translate(offset.x, offset.y);
 		
 		if(Main.loadedMap != null) {
+			for(Level level : Main.loadedMap.levels) {
+				if(level.roomCanvas == null) {
+					level.roomCanvas = new BufferedImage(level.bounds.width, level.bounds.height, BufferedImage.TYPE_INT_ARGB);
+				}
+				if(level != selectedLevel) {
+					g.drawImage(level.roomCanvas, level.bounds.x, level.bounds.y, null);
+				} else {
+					Graphics2D g2d = level.roomCanvas.createGraphics();
+					Composite old = g2d.getComposite();
+					g2d.setComposite(AlphaComposite.Clear);
+					g2d.fillRect(0, 0, level.roomCanvas.getWidth(), level.roomCanvas.getHeight());
+					g2d.setComposite(old);
+				}
+			}
+			
 			drawFillers(g);
 			drawTiles(g, false);
 			drawDecals(g, false);
@@ -197,8 +216,10 @@ public class MapPanel extends JPanel {
 			drawTiles(g, true);
 			drawDecals(g, true);
 			drawTriggers(g);
-			drawSelectionBox(g);
 			drawRooms(g);
+			drawSelectionBox(g);
+			
+			firstDraw = false;
 		}
 		
 		renderingComplete = true;
@@ -217,127 +238,195 @@ public class MapPanel extends JPanel {
 	public void drawTiles(Graphics g, boolean fg) {
 		ArrayList<Tiletype> tileTypes = fg ? TilesTab.fgTileTypes :  TilesTab.bgTileTypes;
 		
-		for(Level level : Main.loadedMap.levels) {
-			char[][] tiles = (fg ? level.solids : level.bg).tileMap;
-			for(int i = 0; i < tiles.length; i++) {
-				for(int j = 0; j < tiles[i].length; j++) {
-					char tile = tiles[i][j];
-					Tiletype type = tileTypes.stream().filter((t) -> t.tile == tile).findFirst().orElse(null);
-					g.setColor(type == null ? Color.pink : type.color);
-					if(type == null) System.out.println((fg ? "Fore" : "Back") + "ground tile " + tile + " not found");
-					g.fillRect(level.bounds.x + j * 8, level.bounds.y + i * 8, 8, 8);
+		if(firstDraw || redrawEverything) {
+			for(Level level : Main.loadedMap.levels) {
+				if(level != selectedLevel) {
+					Graphics imgG = level.roomCanvas.getGraphics();
+					imgG.translate(-level.bounds.x, -level.bounds.y);
+					drawTiles(imgG, level, fg, tileTypes);
 				}
+			}
+		}
+		
+		if(selectedLevel != null) {
+			Graphics imgG = selectedLevel.roomCanvas.getGraphics();
+			imgG.translate(-selectedLevel.bounds.x, -selectedLevel.bounds.y);
+			drawTiles(imgG, selectedLevel, fg, tileTypes);
+			drawTiles(g, selectedLevel, fg, tileTypes);
+		}
+	}
+	
+	private void drawTiles(Graphics g, Level level, boolean fg, ArrayList<Tiletype> tileTypes) {
+		char[][] tiles = (fg ? level.solids : level.bg).tileMap;
+		for(int i = 0; i < tiles.length; i++) {
+			for(int j = 0; j < tiles[i].length; j++) {
+				char tile = tiles[i][j];
+				Tiletype type = tileTypes.stream().filter((t) -> t.tile == tile).findFirst().orElse(null);
+				g.setColor(type == null ? Color.pink : type.color);
+				if(type == null) System.out.println((fg ? "Fore" : "Back") + "ground tile " + tile + " not found");
+				g.fillRect(level.bounds.x + j * 8, level.bounds.y + i * 8, 8, 8);
 			}
 		}
 	}
 	
 	public void drawDecals(Graphics g, boolean fg) {
-		for(Level level : Main.loadedMap.levels) {
-			ListLevelLayer decals = (fg ? level.fgDecals : level.bgDecals);
-			if(decals != null) {
-				for(int i = 0; i < decals.items.size(); i++) {
-					Decal d = (Decal)decals.items.get(i);
-					BufferedImage img = d.getImage();
-					
-					g.drawImage(img, d.x + level.bounds.x - img.getWidth() / 2 * d.scaleX, d.y + level.bounds.y - img.getHeight() / 2 * d.scaleY, img.getWidth() * d.scaleX, img.getHeight() * d.scaleY, null);
+		if(firstDraw || redrawEverything) {
+			for(Level level : Main.loadedMap.levels) {
+				if(level != selectedLevel) {
+					Graphics imgG = level.roomCanvas.getGraphics();
+					imgG.translate(-level.bounds.x, -level.bounds.y);
+					drawDecals(imgG, level, fg);
 				}
+			}
+		}
+		
+		if(selectedLevel != null) {
+			Graphics imgG = selectedLevel.roomCanvas.getGraphics();
+			imgG.translate(-selectedLevel.bounds.x, -selectedLevel.bounds.y);
+			drawDecals(imgG, selectedLevel, fg);
+			drawDecals(g, selectedLevel, fg);
+		}
+	}
+	
+	private void drawDecals(Graphics g, Level level, boolean fg) {
+		ListLevelLayer decals = (fg ? level.fgDecals : level.bgDecals);
+		if(decals != null) {
+			for(int i = 0; i < decals.items.size(); i++) {
+				Decal d = (Decal)decals.items.get(i);
+				BufferedImage img = d.getImage();
+				
+				g.drawImage(img, d.x + level.bounds.x - img.getWidth() / 2 * d.scaleX, d.y + level.bounds.y - img.getHeight() / 2 * d.scaleY, img.getWidth() * d.scaleX, img.getHeight() * d.scaleY, null);
 			}
 		}
 	}
 	
 	public void drawEntities(Graphics g) {
-		Graphics2D g2d = (Graphics2D) g;
 		AlphaComposite alpha = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6f);
-		for(Level level : Main.loadedMap.levels) {
-			for(int i = 0; i < level.entities.items.size(); i++) {
-				Entity e = (Entity)level.entities.items.get(i);
-				EntityConfig ec = Main.entityConfig.get(e.name);
-				if(ec == null) {
-					ec = new EntityConfig();
-					ec.name = e.name;
-					ec.setImage(defaultEntityImg);
-					Main.entityConfig.put(e.name, ec);
+		
+		if(firstDraw || redrawEverything) {
+			for(Level level : Main.loadedMap.levels) {
+				if(level != selectedLevel) {
+					Graphics2D imgG = level.roomCanvas.createGraphics();
+					imgG.translate(-level.bounds.x, -level.bounds.y);
+					drawEntities(imgG, level, alpha);
 				}
+			}
+		}
+		
+		if(selectedLevel != null) {
+			Graphics2D imgG = selectedLevel.roomCanvas.createGraphics();
+			imgG.translate(-selectedLevel.bounds.x, -selectedLevel.bounds.y);
+			drawEntities(imgG, selectedLevel, alpha);
+			drawEntities((Graphics2D)g, selectedLevel, alpha);
+		}
+	}
+	
+	private void drawEntities(Graphics2D g2d, Level level, AlphaComposite alpha) {
+		for(int i = 0; i < level.entities.items.size(); i++) {
+			Entity e = (Entity)level.entities.items.get(i);
+			EntityConfig ec = Main.entityConfig.get(e.name);
+			if(ec == null) {
+				ec = new EntityConfig();
+				ec.name = e.name;
+				ec.setImage(defaultEntityImg);
+				Main.entityConfig.put(e.name, ec);
+			}
+			
+			Rectangle eBounds = null;
+			if(ec.visualType == VisualType.Image) {
+				g2d.drawImage(ec.getImage(), e.x + level.bounds.x - ec.imgOffsetX, e.y + level.bounds.y - ec.imgOffsetY, null);
+			} else if(ec.visualType == VisualType.Box) {
+				eBounds = new Rectangle(e.x + level.bounds.x, e.y + level.bounds.y, (int)e.getProperty("width").value, (int)e.getProperty("height").value);
+				g2d.setColor(ec.fillColor);
+				g2d.fillRect(eBounds.x, eBounds.y, eBounds.width, eBounds.height);
+				g2d.setColor(ec.borderColor);
+				g2d.drawRect(eBounds.x, eBounds.y, eBounds.width, eBounds.height);
+			} else if(ec.visualType == VisualType.ImageBox) {
+				int width = (int)e.getPropertyValue("width", 8);
+				int height = (int)e.getPropertyValue("height", 8);
+				BufferedImage img = ec.getImage();
+				int repX = Math.round(width / (float) img.getWidth());
+				int repY = Math.round(height / (float) img.getHeight());
 				
-				Rectangle eBounds = null;
-				if(ec.visualType == VisualType.Image) {
-					g.drawImage(ec.getImage(), e.x + level.bounds.x - ec.imgOffsetX, e.y + level.bounds.y - ec.imgOffsetY, null);
-				} else if(ec.visualType == VisualType.Box) {
-					eBounds = new Rectangle(e.x + level.bounds.x, e.y + level.bounds.y, (int)e.getProperty("width").value, (int)e.getProperty("height").value);
-					g.setColor(ec.fillColor);
-					g.fillRect(eBounds.x, eBounds.y, eBounds.width, eBounds.height);
-					g.setColor(ec.borderColor);
-					g.drawRect(eBounds.x, eBounds.y, eBounds.width, eBounds.height);
-				} else if(ec.visualType == VisualType.ImageBox) {
-					int width = (int)e.getPropertyValue("width", 8);
-					int height = (int)e.getPropertyValue("height", 8);
-					BufferedImage img = ec.getImage();
-					int repX = Math.round(width / (float) img.getWidth());
-					int repY = Math.round(height / (float) img.getHeight());
-					
-					for(int j = 0; j < repY; j++) {
-						for(int k = 0; k < repX; k++) {
-							g.drawImage(ec.getImage(), e.x + level.bounds.x + k * img.getWidth() - ec.imgOffsetX, e.y + level.bounds.y + j * img.getHeight() - ec.imgOffsetY, null);
-						}
+				for(int j = 0; j < repY; j++) {
+					for(int k = 0; k < repX; k++) {
+						g2d.drawImage(ec.getImage(), e.x + level.bounds.x + k * img.getWidth() - ec.imgOffsetX, e.y + level.bounds.y + j * img.getHeight() - ec.imgOffsetY, null);
 					}
 				}
-				
-				if(selectedEntity == e && e.nodes.size() != 0) {
-					Composite c = g2d.getComposite();
-					g2d.setComposite(alpha);
-					for(Point n : e.nodes) {
-						if(ec.visualType == VisualType.Image) {
-							g.drawImage(ec.getImage(), n.x + level.bounds.x - ec.imgOffsetX, n.y + level.bounds.y - ec.imgOffsetY, null);
-						} else if(ec.visualType == VisualType.Box) {
-							g.setColor(ec.fillColor);
-							g.fillRect(n.x + level.bounds.x, n.y + level.bounds.y, eBounds.width, eBounds.height);
-							g.setColor(ec.borderColor);
-							g.drawRect(n.x + level.bounds.x, n.y + level.bounds.y, eBounds.width, eBounds.height);
-						} else if(ec.visualType == VisualType.ImageBox) {
-							int width = (int)e.getProperty("width").value;
-							int height = (int)e.getProperty("height").value;
-							BufferedImage img = ec.getImage();
-							int repX = Math.round(width / (float) img.getWidth());
-							int repY = Math.round(height / (float) img.getHeight());
-							
-							for(int j = 0; j < repY; j++) {
-								for(int k = 0; k < repX; k++) {
-									g.drawImage(ec.getImage(), e.x + level.bounds.x + k * img.getWidth() - ec.imgOffsetX, e.y + level.bounds.y + j * img.getHeight() - ec.imgOffsetY, null);
-								}
+			}
+			
+			if(selectedEntity == e && e.nodes.size() != 0) {
+				Composite c = g2d.getComposite();
+				g2d.setComposite(alpha);
+				for(Point n : e.nodes) {
+					if(ec.visualType == VisualType.Image) {
+						g2d.drawImage(ec.getImage(), n.x + level.bounds.x - ec.imgOffsetX, n.y + level.bounds.y - ec.imgOffsetY, null);
+					} else if(ec.visualType == VisualType.Box) {
+						g2d.setColor(ec.fillColor);
+						g2d.fillRect(n.x + level.bounds.x, n.y + level.bounds.y, eBounds.width, eBounds.height);
+						g2d.setColor(ec.borderColor);
+						g2d.drawRect(n.x + level.bounds.x, n.y + level.bounds.y, eBounds.width, eBounds.height);
+					} else if(ec.visualType == VisualType.ImageBox) {
+						int width = (int)e.getProperty("width").value;
+						int height = (int)e.getProperty("height").value;
+						BufferedImage img = ec.getImage();
+						int repX = Math.round(width / (float) img.getWidth());
+						int repY = Math.round(height / (float) img.getHeight());
+						
+						for(int j = 0; j < repY; j++) {
+							for(int k = 0; k < repX; k++) {
+								g2d.drawImage(ec.getImage(), e.x + level.bounds.x + k * img.getWidth() - ec.imgOffsetX, e.y + level.bounds.y + j * img.getHeight() - ec.imgOffsetY, null);
 							}
 						}
 					}
-					g2d.setComposite(c);
 				}
+				g2d.setComposite(c);
 			}
 		}
 	}
 	
 	public void drawTriggers(Graphics g) {
-		Graphics2D g2d = (Graphics2D) g;
 		AlphaComposite alpha = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6f);
-		for(Level level : Main.loadedMap.levels) {
-			for(int i = 0; i < level.triggers.items.size(); i++) {
-				Entity e = (Entity)level.triggers.items.get(i);
-				Rectangle triggerBounds = new Rectangle(e.x + level.bounds.x, e.y + level.bounds.y, e.getPropertyValue("width", 8), e.getPropertyValue("height", 8));
-				g.setColor(new Color(200, 0, 0, 100));
-				g.fillRect(triggerBounds.x, triggerBounds.y, triggerBounds.width, triggerBounds.height);
-				g.setColor(Color.black);
-				TextRenderer.drawString(g, e.name, getFont(), g.getColor(), triggerBounds, TextAlignment.MIDDLE);
-				g.setColor(Color.darkGray);
-				g.drawRect(triggerBounds.x, triggerBounds.y, triggerBounds.width, triggerBounds.height);
-				
-				if(selectedEntity == e && e.nodes.size() != 0) {
-					Composite c = g2d.getComposite();
-					g2d.setComposite(alpha);
-					for(Point n : e.nodes) {
-						g.setColor(new Color(200, 0, 0, 100));
-						g.fillRect(n.x + level.bounds.x, n.y + level.bounds.y, triggerBounds.width, triggerBounds.height);
-						g.setColor(Color.darkGray);
-						g.drawRect(n.x + level.bounds.x, n.y + level.bounds.y, triggerBounds.width, triggerBounds.height);
-					}
-					g2d.setComposite(c);
+		
+		if(firstDraw || redrawEverything) {
+			for(Level level : Main.loadedMap.levels) {
+				if(level != selectedLevel) {
+					Graphics2D imgG = level.roomCanvas.createGraphics();
+					imgG.translate(-level.bounds.x, -level.bounds.y);
+					drawTriggers(imgG, level, alpha);
 				}
+			}
+		}
+		
+		if(selectedLevel != null) {
+			Graphics2D imgG = selectedLevel.roomCanvas.createGraphics();
+			imgG.translate(-selectedLevel.bounds.x, -selectedLevel.bounds.y);
+			drawTriggers(imgG, selectedLevel, alpha);
+			drawTriggers((Graphics2D)g, selectedLevel, alpha);
+		}
+	}
+	
+	private void drawTriggers(Graphics2D g2d, Level level, AlphaComposite alpha) {
+		for(int i = 0; i < level.triggers.items.size(); i++) {
+			Entity e = (Entity)level.triggers.items.get(i);
+			Rectangle triggerBounds = new Rectangle(e.x + level.bounds.x, e.y + level.bounds.y, e.getPropertyValue("width", 8), e.getPropertyValue("height", 8));
+			g2d.setColor(new Color(200, 0, 0, 100));
+			g2d.fillRect(triggerBounds.x, triggerBounds.y, triggerBounds.width, triggerBounds.height);
+			g2d.setColor(Color.black);
+			TextRenderer.drawString(g2d, e.name, getFont(), g2d.getColor(), triggerBounds, TextAlignment.MIDDLE);
+			g2d.setColor(Color.darkGray);
+			g2d.drawRect(triggerBounds.x, triggerBounds.y, triggerBounds.width, triggerBounds.height);
+			
+			if(selectedEntity == e && e.nodes.size() != 0) {
+				Composite c = g2d.getComposite();
+				g2d.setComposite(alpha);
+				for(Point n : e.nodes) {
+					g2d.setColor(new Color(200, 0, 0, 100));
+					g2d.fillRect(n.x + level.bounds.x, n.y + level.bounds.y, triggerBounds.width, triggerBounds.height);
+					g2d.setColor(Color.darkGray);
+					g2d.drawRect(n.x + level.bounds.x, n.y + level.bounds.y, triggerBounds.width, triggerBounds.height);
+				}
+				g2d.setComposite(c);
 			}
 		}
 	}
@@ -390,6 +479,7 @@ public class MapPanel extends JPanel {
 	}
 	
 	public void drawSelectionBox(Graphics g) {
+		
 		if(selectedEntity != null) {
 			Graphics2D g2d = (Graphics2D) g;
 			Stroke origStroke = g2d.getStroke();

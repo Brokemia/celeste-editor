@@ -6,6 +6,7 @@ import java.util.Arrays;
 import javax.swing.Icon;
 
 import celesteeditor.Main;
+import celesteeditor.data.TileLevelLayer;
 
 public class RectangleTileTool extends TileTool {
 	
@@ -18,7 +19,9 @@ public class RectangleTileTool extends TileTool {
 	}
 
 	@Override
-	public void drawAt(char[][] tileMap, Tiletype tileType, Point p, MouseAction action) {
+	public void drawAt(TileLevelLayer tileLayer, Tiletype tileType, Point p, MouseAction action) {
+		char[][] tileMap = tileLayer.tileMap;
+		
 		switch(action) {
 		case PRESSED:
 			rectStart = p;
@@ -37,7 +40,7 @@ public class RectangleTileTool extends TileTool {
 				Point bottomRight = new Point(Math.max(p.x, rectStart.x), Math.max(p.y, rectStart.y));
 				for(int i = topLeft.y; i <= bottomRight.y && i < Main.mapPanel.selectedLevel.bounds.height; i++) {
 					for(int j = topLeft.x; j <= bottomRight.x && j < Main.mapPanel.selectedLevel.bounds.width; j++) {
-						placeTile(tileMap, tileType, new Point(j, i));
+						placeTile(tileLayer, tileType, new Point(j, i));
 					}
 				}
 			}

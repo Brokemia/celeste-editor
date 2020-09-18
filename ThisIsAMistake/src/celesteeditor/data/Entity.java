@@ -40,6 +40,15 @@ public class Entity implements ElementEncoded {
 		return properties.stream().filter((p) -> p.name.equals(name)).findFirst().orElse(null);
 	}
 	
+	/**
+	 * Finds the bounding box of this entity without accounting for the zoom and offset
+	 * @param level The level this entity is in
+	 * @return
+	 */
+	public Rectangle getUnadjustedBounds(Level level) {
+		throw new RuntimeException("Not implemented");
+	}
+	
 	public Rectangle getBounds(Level level) {
 		return getBounds(level, -1, new Point(0, 0), 1);
 	}

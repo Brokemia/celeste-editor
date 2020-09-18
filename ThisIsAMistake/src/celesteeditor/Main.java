@@ -76,7 +76,7 @@ public class Main {
 	
 	public static void saveMap() throws FileNotFoundException, IOException {
 		if(loadedMap == null) return;
-		JFileChooser j = new JFileChooser(new File("./")); 
+		JFileChooser j = new JFileChooser(new File("./"));
 		FileNameExtensionFilter filter = new FileNameExtensionFilter(
 		        "Map Binary", "bin");
 		j.setFileFilter(filter);

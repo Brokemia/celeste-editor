@@ -1,6 +1,7 @@
 package celesteeditor.data;
 
 import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -59,6 +60,17 @@ public class Level implements ElementEncoded {
 	public TileLevelLayer bg;
 	
 	public IntTileLevelLayer objTiles; // TODO object tiles
+		
+	public BufferedImage roomCanvas;
+	
+	public void adjustCanvasSize() {
+		Rectangle bounds = new Rectangle(this.bounds);
+		
+		for(ElementEncoded ee : triggers.items) {
+			Entity e = (Entity) ee;
+			bounds.x = Math.min(bounds.x, e.getUnadjustedBounds(this).x);
+		}
+	}
 	
 	@Override
 	public String toString() {
