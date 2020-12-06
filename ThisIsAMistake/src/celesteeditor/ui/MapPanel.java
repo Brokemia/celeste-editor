@@ -15,6 +15,7 @@ import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
@@ -257,11 +258,15 @@ public class MapPanel extends JPanel {
 	}
 	
 	private void drawTiles(Graphics g, Level level, boolean fg, ArrayList<Tiletype> tileTypes) {
+		HashMap<Character, Tiletype> ttMap = new HashMap<>();
+		for(Tiletype t : tileTypes) {
+			ttMap.put(t.tile, t);
+		}
 		char[][] tiles = (fg ? level.solids : level.bg).tileMap;
 		for(int i = 0; i < tiles.length; i++) {
 			for(int j = 0; j < tiles[i].length; j++) {
 				char tile = tiles[i][j];
-				Tiletype type = tileTypes.stream().filter((t) -> t.tile == tile).findFirst().orElse(null);
+				Tiletype type = ttMap.get(tile);
 				g.setColor(type == null ? Color.pink : type.color);
 				if(type == null) System.out.println((fg ? "Fore" : "Back") + "ground tile " + tile + " not found");
 				g.fillRect(level.bounds.x + j * 8, level.bounds.y + i * 8, 8, 8);

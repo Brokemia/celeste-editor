@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
 
+import celesteeditor.AtlasUnpacker;
 import celesteeditor.ui.MapPanel;
 import celesteeditor.util.Util;
 
@@ -40,7 +41,14 @@ public class EntityConfig {
 	}
 	
 	public void setImage(String imgPath) {
-		image = Util.getImage(imgPath);
+		image = null;
+		if(imgPath.startsWith("Gameplay:")) {
+			image = AtlasUnpacker.gameplay.get(imgPath.replace('\\', '/').substring("Gameplay:".length()));
+		}
+		
+		if(image == null) {
+			image = Util.getImage(imgPath);
+		}
 		imagePath = imgPath;
 		if(image == null) {
 			image = MapPanel.defaultEntityImg;

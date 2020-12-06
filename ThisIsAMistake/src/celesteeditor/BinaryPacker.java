@@ -4,8 +4,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,6 +17,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.io.FilenameUtils;
 
+import celesteeditor.util.StringEncoding;
 import github.MichaelBeeu.util.EndianDataInputStream;
 import github.MichaelBeeu.util.EndianDataOutputStream;
 
@@ -160,11 +159,11 @@ public class BinaryPacker {
         createLookupTable(rootElement);
         addLookupValue(InnerTextAttributeName);
         try (EndianDataOutputStream outStream = new EndianDataOutputStream(new FileOutputStream(outFile)).order(ByteOrder.LITTLE_ENDIAN)) {
-            writeString(outStream, "CELESTE MAP");
-            writeString(outStream, FilenameUtils.removeExtension(outFile.getName()));
+            StringEncoding.writeString(outStream, "CELESTE MAP");
+            StringEncoding.writeString(outStream, FilenameUtils.removeExtension(outFile.getName()));
             outStream.writeShort((short)stringValue.size() & 0xffff);
             for (Entry<String, Short> item : stringValue.entrySet().stream().sorted((e1, e2) -> e1.getValue().compareTo(e2.getValue())).collect(Collectors.toList())) {
-                writeString(outStream, item.getKey());
+            	StringEncoding.writeString(outStream, item.getKey());
             }
             writeElement(outStream, rootElement);
             outStream.flush();
@@ -248,7 +247,7 @@ public class BinaryPacker {
 	                outStream.write(array);
 	            } else {
 	                outStream.writeByte((byte)6);
-	                writeString(outStream, element.Attr(InnerTextAttributeName));
+	                StringEncoding.writeString(outStream, element.Attr(InnerTextAttributeName));
 	            }
 	        }
         }
@@ -328,56 +327,16 @@ public class BinaryPacker {
     	}
     	return true;
     }
-    
-    private static void write7BitEncodedInt(OutputStream stream, int val) throws IOException {
-    	long num;
-    	for (num = val & 0xFFFFFFFFL; num >= 128; num >>= 7)
-    	{
-    		stream.write((byte)(num | 0x80));
-    	}
-    	stream.write((byte)num);
-    }
-    
-    private static void writeString(OutputStream stream, String str) throws IOException {
-    	write7BitEncodedInt(stream, str.length());
-    	for(int i = 0; i < str.length(); i++) {
-    		stream.write(str.charAt(i));
-    	}
-    }
-    
-    private static int read7BitEncodedInt(InputStream stream) throws IOException {
-    	int num = 0;
-    	int num2 = 0;
-    	byte b;
-    	do {
-    		if(num2 == 35) {
-    			throw new IOException("Something is wrong with the string format. AAAA");
-    		}
-    		b = (byte)stream.read();
-    		num |= (b & 0x7F) << num2;
-    		num2 += 7;
-    	} while((b & 0x80) != 0);
-    	return num;
-    }
-    
-    private static String readString(InputStream stream) throws IOException {
-    	String res = "";
-    	int len = read7BitEncodedInt(stream);
-    	for(int i = 0; i < len; i++) {
-    		res += (char)stream.read();
-    	}
-    	return res;
-    }
 
     public static Element fromBinary(String filename) throws FileNotFoundException, IOException {
         try (@SuppressWarnings("resource")
 		EndianDataInputStream reader = new EndianDataInputStream(new FileInputStream(filename)).order(ByteOrder.LITTLE_ENDIAN)) {
-            readString(reader);
-            String pkg = readString(reader);
+        	StringEncoding.readString(reader);
+            String pkg = StringEncoding.readString(reader);
             short num = reader.readShort();
             stringLookup = new String[num];
             for (int i = 0; i < num; i++) {
-                stringLookup[i] = readString(reader);
+                stringLookup[i] = StringEncoding.readString(reader);
             }
             Element element = readElement(reader);
             element.Package = pkg;
@@ -418,7 +377,7 @@ public class BinaryPacker {
                     value = stringLookup[reader.readShort()];
                     break;
                 case 6:
-                    value = readString(reader);
+                    value = StringEncoding.readString(reader);
                     break;
                 case 7: {
                         short count = reader.readShort();

@@ -19,6 +19,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 
+import celesteeditor.Main;
 import celesteeditor.editing.EntityConfig;
 import celesteeditor.editing.EntityConfig.VisualType;
 
@@ -141,6 +142,7 @@ public class EntityConfigPopup extends JFrame {
 		} catch (FileNotFoundException e1) {
 			e1.printStackTrace();
 		}
+		Main.mapPanel.firstDraw = true;
 		this.dispose();
 	}
 	

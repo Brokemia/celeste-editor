@@ -1,26 +1,21 @@
 package celesteeditor.data;
 
 import java.awt.image.BufferedImage;
-import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 
+import celesteeditor.AtlasUnpacker;
 import celesteeditor.BinaryPacker.Element;
 import celesteeditor.ui.MapPanel;
 import celesteeditor.util.Util;
 
 public class Decal implements ElementEncoded {
-	/**
-	 * Maps the decal texture paths to their actual location (in the mods folder or graphics)
-	 */
-	public static HashMap<String, String> decalLocations = new HashMap<>();
+	public static ArrayList<String> decals = new ArrayList<>();
 
-	public static void loadDecalsFromFolder(File folder, String prefix, String subfolders) {
-		for(File decal : folder.listFiles()) {
-			if(decal.isDirectory()) {
-				loadDecalsFromFolder(decal, prefix, subfolders + "\\" + decal.getName());
-			} else if(decal.getPath().endsWith(".png")) {
-				String name = subfolders + "\\" + decal.getName();
-				decalLocations.put(name.substring(1), prefix + name);
+	public static void loadDecalsFromAtlas() {
+		for(String path : AtlasUnpacker.gameplay.keySet()) {
+			if(path.startsWith("decals/")) {
+				decals.add(path.substring("decals/".length()));
 			}
 		}
 	}
@@ -44,7 +39,10 @@ public class Decal implements ElementEncoded {
 	}
 	
 	public void setTexture(String path) {
-		image = Util.getImage("/" + decalLocations.getOrDefault(path, path).replace('\\', '/'));
+		image = AtlasUnpacker.gameplay.get("decals/" + path.replace('\\', '/'));
+		if(image == null) {
+			image = Util.getImage("/" + path.replace('\\', '/'));
+		}
 		texture = path;
 		if(image == null) {
 			image = MapPanel.defaultEntityImg;

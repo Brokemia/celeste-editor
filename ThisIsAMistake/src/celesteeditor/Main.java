@@ -5,13 +5,14 @@ import java.awt.Toolkit;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JSplitPane;
+import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import celesteeditor.BinaryPacker.Element;
@@ -36,6 +37,8 @@ public class Main {
 	public static EditingPanel editingPanel;
 		
 	public static HashMap<String, EntityConfig> entityConfig = new HashMap<>();
+	
+	public static GlobalConfig globalConfig;
 
 	public static void main(String[] args) throws FileNotFoundException, IOException {
 //		Element map = BinaryPacker.fromBinary("test_out.bin");
@@ -63,29 +66,58 @@ public class Main {
 //			}
 //		}
 		
-		File decalFolder = new File("bin/Atlases/Gameplay/decals");
-		if(decalFolder.exists()) {
-			Decal.loadDecalsFromFolder(decalFolder, "Atlases/Gameplay/decals", "");
-		}
-		
-		openMap();
+//		File decalFolder = new File("bin/Atlases/Gameplay/decals");
+//		if(decalFolder.exists()) {
+//			Decal.loadDecalsFromFolder(decalFolder, "Atlases/Gameplay/decals", "");
+//		}
+//		
 		loadConfig();
+		if(globalConfig.celesteDir == null || globalConfig.celesteDir.isBlank()) {
+			JFileChooser chooser = new JFileChooser(new File("./"));
+			//FileNameExtensionFilter filter = new FileNameExtensionFilter("Application", "exe");
+			chooser.setFileFilter(new FileFilter() {
+
+				@Override
+				public boolean accept(File f) {
+					return f.isDirectory() || f.getName().equals("Celeste.exe");
+				}
+
+				@Override
+				public String getDescription() {
+					return "Celeste.exe";
+				}
+				
+			});
+			chooser.setDialogTitle("Select your Celeste.exe");
+			chooser.setAcceptAllFileFilterUsed(false);
+		    
+			while(chooser.showDialog(null, "Select") != JFileChooser.APPROVE_OPTION) {
+				
+			}
+			
+	    	globalConfig.celesteDir = chooser.getCurrentDirectory().toString();
+	    	saveGlobalConfig();
+		}
+		AtlasUnpacker.loadAtlases();
+		reloadECImages();
+		Decal.loadDecalsFromAtlas();
+		openMap();
 		setupMainWindow();
 		new Thread(new UpdateThread()).start();
 	}
 	
 	public static void saveMap() throws FileNotFoundException, IOException {
 		if(loadedMap == null) return;
-		JFileChooser j = new JFileChooser(new File("./"));
+		JFileChooser chooser = new JFileChooser(new File("./"));
 		FileNameExtensionFilter filter = new FileNameExtensionFilter(
 		        "Map Binary", "bin");
-		j.setFileFilter(filter);
+		chooser.setFileFilter(filter);
 		// Open the save dialog 
-		int res = j.showSaveDialog(null);
+		int res = chooser.showSaveDialog(null);
 		
 		// if the user selects a file 
         if (res == JFileChooser.APPROVE_OPTION) { 
-        	BinaryPacker.toBinary(loadedMap.asElement(), new File(j.getSelectedFile().getAbsolutePath()));
+        	BinaryPacker.toBinary(loadedMap.asElement(), new File(chooser.getSelectedFile().getAbsolutePath()));
         }
 	}
 	
@@ -103,25 +135,48 @@ public class Main {
         }
 	}
 	
+	public static void reloadECImages() {
+		for(EntityConfig ec : entityConfig.values()) {
+			ec.setImage(ec.getImagePath());
+		}
+	}
+	
+	public static void saveGlobalConfig() {
+		try {
+			File config = new File("config/global.config");
+			PrintWriter pw = new PrintWriter(config);
+			pw.append(globalConfig.toString());
+			pw.flush();
+			pw.close();
+		} catch (FileNotFoundException e1) {
+			e1.printStackTrace();
+		}
+	}
+	
 	public static void loadConfig() {
 		File configFolder = new File("config");
 		if(!configFolder.exists())
 			configFolder.mkdir();
-		for(File subfolder : configFolder.listFiles()) {
-			if(subfolder.isDirectory()) {
-				switch(subfolder.getName()) {
+		for(File file : configFolder.listFiles()) {
+			if(file.isDirectory()) {
+				switch(file.getName()) {
 				case "entity":
-					loadEntityConfig(subfolder);
+					loadEntityConfig(file);
 					break;
 				case "tile":
-					loadTileConfig(subfolder);
+					loadTileConfig(file);
 					break;
 				case "placement":
-					loadPlacementConfig(subfolder);
+					loadPlacementConfig(file);
 				}
 				
+			} else if(file.getName().equals("global.config")) {
+				globalConfig = GlobalConfig.fromFile(file);
 			}
 			
+		}
+		if(globalConfig == null) {
+			globalConfig = new GlobalConfig();
 		}
 	}
 	

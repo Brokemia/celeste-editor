@@ -105,7 +105,7 @@ public class PlacementsTab extends JPanel {
 	public void refreshLists() {
 		entityList.setListData(placementConfig.entrySet().stream().filter((e) -> e.getValue().placementType == PlacementType.Entity).map((e) -> e.getValue().name).toArray(String[]::new));
 		triggerList.setListData(placementConfig.entrySet().stream().filter((e) -> e.getValue().placementType == PlacementType.Trigger).map((e) -> e.getValue().name).toArray(String[]::new));
-		decalList.setListData(Decal.decalLocations.keySet().toArray(new String[Decal.decalLocations.size()]));
+		decalList.setListData(Decal.decals.toArray(new String[Decal.decals.size()]));
 		revalidate();
 	}
 	
