@@ -14,8 +14,7 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Random;
 
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
@@ -30,6 +29,7 @@ import celesteeditor.data.Decal;
 import celesteeditor.data.Entity;
 import celesteeditor.data.Level;
 import celesteeditor.data.ListLevelLayer;
+import celesteeditor.data.TileLevelLayer;
 import celesteeditor.editing.EntityConfig;
 import celesteeditor.editing.EntityConfig.VisualType;
 import celesteeditor.editing.Tiletype;
@@ -209,16 +209,33 @@ public class MapPanel extends JPanel {
 					g2d.setComposite(old);
 				}
 			}
-			
+			long start = System.currentTimeMillis();
 			drawFillers(g);
+			//System.out.println("Fillers: " + (System.currentTimeMillis() - start));
+			start = System.currentTimeMillis();
 			drawTiles(g, false);
+			//System.out.println("Bg Tiles: " + (System.currentTimeMillis() - start));
+			start = System.currentTimeMillis();
 			drawDecals(g, false);
+			//System.out.println("Bg Decals: " + (System.currentTimeMillis() - start));
+			start = System.currentTimeMillis();
 			drawEntities(g);
+			//System.out.println("Entities: " + (System.currentTimeMillis() - start));
+			start = System.currentTimeMillis();
 			drawTiles(g, true);
+			//System.out.println("Fg Tiles: " + (System.currentTimeMillis() - start));
+			start = System.currentTimeMillis();
 			drawDecals(g, true);
+			//System.out.println("Fg Decals: " + (System.currentTimeMillis() - start));
+			start = System.currentTimeMillis();
 			drawTriggers(g);
+			//System.out.println("Triggers: " + (System.currentTimeMillis() - start));
+			start = System.currentTimeMillis();
 			drawRooms(g);
+			//System.out.println("Rooms: " + (System.currentTimeMillis() - start));
+			start = System.currentTimeMillis();
 			drawSelectionBox(g);
+			//System.out.println("Selection Box: " + (System.currentTimeMillis() - start));
 			
 			firstDraw = false;
 		}
@@ -237,14 +254,12 @@ public class MapPanel extends JPanel {
 	}
 	
 	public void drawTiles(Graphics g, boolean fg) {
-		ArrayList<Tiletype> tileTypes = fg ? TilesTab.fgTileTypes :  TilesTab.bgTileTypes;
-		
 		if(firstDraw || redrawEverything) {
 			for(Level level : Main.loadedMap.levels) {
 				if(level != selectedLevel) {
 					Graphics imgG = level.roomCanvas.getGraphics();
 					imgG.translate(-level.bounds.x, -level.bounds.y);
-					drawTiles(imgG, level, fg, tileTypes);
+					drawTiles(imgG, level, fg);
 				}
 			}
 		}
@@ -252,26 +267,28 @@ public class MapPanel extends JPanel {
 		if(selectedLevel != null) {
 			Graphics imgG = selectedLevel.roomCanvas.getGraphics();
 			imgG.translate(-selectedLevel.bounds.x, -selectedLevel.bounds.y);
-			drawTiles(imgG, selectedLevel, fg, tileTypes);
-			drawTiles(g, selectedLevel, fg, tileTypes);
+			drawTiles(imgG, selectedLevel, fg);
+			drawTiles(g, selectedLevel, fg);
 		}
 	}
 	
-	private void drawTiles(Graphics g, Level level, boolean fg, ArrayList<Tiletype> tileTypes) {
-		HashMap<Character, Tiletype> ttMap = new HashMap<>();
-		for(Tiletype t : tileTypes) {
-			ttMap.put(t.tile, t);
-		}
-		char[][] tiles = (fg ? level.solids : level.bg).tileMap;
-		for(int i = 0; i < tiles.length; i++) {
-			for(int j = 0; j < tiles[i].length; j++) {
-				char tile = tiles[i][j];
-				Tiletype type = ttMap.get(tile);
-				g.setColor(type == null ? Color.pink : type.color);
-				if(type == null) System.out.println((fg ? "Fore" : "Back") + "ground tile " + tile + " not found");
-				g.fillRect(level.bounds.x + j * 8, level.bounds.y + i * 8, 8, 8);
+	private void drawTiles(Graphics g, Level level, boolean fg) {
+		Main.bgAutotiler.rand = new Random(level.name.hashCode());
+		Main.fgAutotiler.rand = new Random(level.name.hashCode());
+		
+		TileLevelLayer tiles = fg ? level.solids : level.bg;
+		if(tiles.img == null) {
+			tiles.img = new BufferedImage(level.bounds.width, level.bounds.height, BufferedImage.TYPE_INT_ARGB);
+			Graphics imgG = tiles.img.createGraphics();
+			tiles.tileImgs = (fg ? Main.fgAutotiler : Main.bgAutotiler).generateMap(tiles, true).tileImg;
+			for(int i = 0; i < tiles.tileImgs.length; i++) {
+				for(int j = 0; j < tiles.tileImgs[i].length; j++) {
+					imgG.drawImage(tiles.tileImgs[i][j], j * 8, i * 8, null);
+				}
 			}
 		}
+		
+		g.drawImage(tiles.img, level.bounds.x, level.bounds.y, null);
 	}
 	
 	public void drawDecals(Graphics g, boolean fg) {

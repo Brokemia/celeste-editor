@@ -142,6 +142,7 @@ public class EntityConfigPopup extends JFrame {
 		} catch (FileNotFoundException e1) {
 			e1.printStackTrace();
 		}
+		// Force everything to redraw to update visuals of this entity in other rooms
 		Main.mapPanel.firstDraw = true;
 		this.dispose();
 	}

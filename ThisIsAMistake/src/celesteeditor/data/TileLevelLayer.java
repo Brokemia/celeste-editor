@@ -1,5 +1,7 @@
 package celesteeditor.data;
 
+import java.awt.image.BufferedImage;
+
 import celesteeditor.BinaryPacker.Element;
 
 public class TileLevelLayer extends LevelLayer {
@@ -8,6 +10,35 @@ public class TileLevelLayer extends LevelLayer {
 	public String tileset;
 		
 	public char[][] tileMap;
+	
+	private int width, height;
+	
+	public BufferedImage img;
+	
+	public BufferedImage[][] tileImgs;
+	
+	public TileLevelLayer(int width, int height) {
+		this.width = width;
+		this.height = height;
+	}
+	
+	public int getWidth() {
+		return width;
+	}
+	
+	public int getHeight() {
+		return height;
+	}
+	
+	public char getTile(int x, int y) {
+		if(y < 0 || y >= getHeight() || x < 0 || x >= getWidth()) {
+			throw new IndexOutOfBoundsException("Tile coords (" + x + "," + y + ") are out of bounds");
+		}
+		
+		if(y >= tileMap.length || x >= tileMap[y].length) return '0';
+		
+		return tileMap[y][x];
+	}
 	
 	public void setTileString(String tiles) {
 		tileMap = convertToTilemap(tiles);

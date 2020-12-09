@@ -15,6 +15,8 @@ import javax.swing.JSplitPane;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import org.xml.sax.SAXException;
+
 import celesteeditor.BinaryPacker.Element;
 import celesteeditor.data.Decal;
 import celesteeditor.data.Map;
@@ -25,6 +27,7 @@ import celesteeditor.ui.EditingPanel;
 import celesteeditor.ui.MapPanel;
 import celesteeditor.ui.PlacementsTab;
 import celesteeditor.ui.TilesTab;
+import celesteeditor.ui.autotiler.Autotiler;
 
 public class Main {
 	
@@ -34,6 +37,8 @@ public class Main {
 	
 	public static MapPanel mapPanel;
 	
+	public static Autotiler bgAutotiler, fgAutotiler;
+	
 	public static EditingPanel editingPanel;
 		
 	public static HashMap<String, EntityConfig> entityConfig = new HashMap<>();
@@ -42,7 +47,7 @@ public class Main {
 
 	public static void main(String[] args) throws FileNotFoundException, IOException {
 //		Element map = BinaryPacker.fromBinary("test_out.bin");
-//		System.setOut(new PrintStream(new File("test_out.txt")));
+//		System.setOut(new PrintStream(new File("allImages.txt")));
 //		printElement(map, "");
 //		Element levels = map.Children.stream().filter((Element e) -> e.Name.equals("levels")).findFirst().get();
 //		for(Element level : levels.Children) {
@@ -99,6 +104,7 @@ public class Main {
 	    	saveGlobalConfig();
 		}
 		AtlasUnpacker.loadAtlases();
+		setupAutotilers();
 		reloadECImages();
 		Decal.loadDecalsFromAtlas();
 		openMap();
@@ -208,6 +214,15 @@ public class Main {
 				PlacementConfig pc = PlacementConfig.fromFile(config);
 				PlacementsTab.placementConfig.put(pc.name, pc);
 			}
+		}
+	}
+	
+	public static void setupAutotilers() throws IOException {
+		try {
+			fgAutotiler = new Autotiler(new File(globalConfig.celesteDir + "/Content/Graphics/ForegroundTiles.xml").toURI().toString());
+			bgAutotiler = new Autotiler(new File(globalConfig.celesteDir + "/Content/Graphics/BackgroundTiles.xml").toURI().toString());
+		} catch (SAXException e) {
+			e.printStackTrace();
 		}
 	}
 	
