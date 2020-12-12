@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-14">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="/ThisIsAMistake/libs/jogamp-all-platforms/jar/gluegen-rt.jar" sourcepath="/ThisIsAMistake/libs/jogamp-all-platforms/gluegen-java-src.zip"/>
+	<classpathentry kind="lib" path="/ThisIsAMistake/libs/jogamp-all-platforms/jar/gluegen-rt-natives-windows-amd64.jar"/>
+	<classpathentry kind="lib" path="/ThisIsAMistake/libs/jogamp-all-platforms/jar/jogl-all.jar" sourcepath="/ThisIsAMistake/libs/jogamp-all-platforms/jogl-java-src.zip"/>
+	<classpathentry kind="lib" path="/ThisIsAMistake/libs/jogamp-all-platforms/jar/jogl-all-natives-windows-amd64.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

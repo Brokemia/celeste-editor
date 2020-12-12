@@ -5,6 +5,7 @@ import java.awt.Point;
 import javax.swing.Icon;
 
 import celesteeditor.data.TileLevelLayer;
+import celesteeditor.ui.autotiler.TerrainType;
 
 public class BrushTileTool extends TileTool {
 	
@@ -13,13 +14,13 @@ public class BrushTileTool extends TileTool {
 	}
 
 	@Override
-	public void drawAt(TileLevelLayer tileLayer, Tiletype tileType, Point p, MouseAction action) {
+	public void drawAt(TileLevelLayer tileLayer, TerrainType tileType, Point p, MouseAction action) {
 		placeTile(tileLayer, tileType, p);
 	}
 
 	@Override
-	public boolean[][] getTileOverlay() {
-		return new boolean[][] {{true}};
+	public char[][] getTileOverlay(char tile) {
+		return new char[][] {{tile}};
 	}
 
 	@Override

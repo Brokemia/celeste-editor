@@ -7,6 +7,7 @@ import javax.swing.Icon;
 
 import celesteeditor.Main;
 import celesteeditor.data.TileLevelLayer;
+import celesteeditor.ui.autotiler.TerrainType;
 
 public class RectangleTileTool extends TileTool {
 	
@@ -19,7 +20,7 @@ public class RectangleTileTool extends TileTool {
 	}
 
 	@Override
-	public void drawAt(TileLevelLayer tileLayer, Tiletype tileType, Point p, MouseAction action) {
+	public void drawAt(TileLevelLayer tileLayer, TerrainType tileType, Point p, MouseAction action) {
 		char[][] tileMap = tileLayer.tileMap;
 		
 		switch(action) {
@@ -51,13 +52,13 @@ public class RectangleTileTool extends TileTool {
 	}
 
 	@Override
-	public boolean[][] getTileOverlay() {
-		if(lastMousePos == null || rectStart == null) return new boolean[][] {{true}};
+	public char[][] getTileOverlay(char tile) {
+		if(lastMousePos == null || rectStart == null) return new char[][] {{tile}};
 		Point topLeft = new Point(Math.min(lastMousePos.x, rectStart.x), Math.min(lastMousePos.y, rectStart.y));
 		Point bottomRight = new Point(Math.max(lastMousePos.x, rectStart.x), Math.max(lastMousePos.y, rectStart.y));
-		boolean[][] res = new boolean[bottomRight.y - topLeft.y + 1][bottomRight.x - topLeft.x + 1];
-		for(boolean[] row : res) {
-			Arrays.fill(row, true);
+		char[][] res = new char[bottomRight.y - topLeft.y + 1][bottomRight.x - topLeft.x + 1];
+		for(char[] row : res) {
+			Arrays.fill(row, tile);
 		}
 
 		return res;

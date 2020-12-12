@@ -5,6 +5,7 @@ import java.awt.Point;
 import javax.swing.Icon;
 
 import celesteeditor.data.TileLevelLayer;
+import celesteeditor.ui.autotiler.TerrainType;
 
 public class DummyTileTool extends TileTool {
 	
@@ -13,12 +14,12 @@ public class DummyTileTool extends TileTool {
 	}
 
 	@Override
-	public void drawAt(TileLevelLayer tileLayer, Tiletype tileType, Point p, MouseAction action) {
+	public void drawAt(TileLevelLayer tileLayer, TerrainType tileType, Point p, MouseAction action) {
 		
 	}
 
 	@Override
-	public boolean[][] getTileOverlay() {
+	public char[][] getTileOverlay(char tile) {
 		return null;
 	}
 

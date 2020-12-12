@@ -22,11 +22,9 @@ import celesteeditor.data.Decal;
 import celesteeditor.data.Map;
 import celesteeditor.editing.EntityConfig;
 import celesteeditor.editing.PlacementConfig;
-import celesteeditor.editing.Tiletype;
 import celesteeditor.ui.EditingPanel;
 import celesteeditor.ui.MapPanel;
 import celesteeditor.ui.PlacementsTab;
-import celesteeditor.ui.TilesTab;
 import celesteeditor.ui.autotiler.Autotiler;
 
 public class Main {
@@ -169,9 +167,6 @@ public class Main {
 				case "entity":
 					loadEntityConfig(file);
 					break;
-				case "tile":
-					loadTileConfig(file);
-					break;
 				case "placement":
 					loadPlacementConfig(file);
 				}
@@ -191,19 +186,6 @@ public class Main {
 			if(config.getPath().endsWith(".config")) {
 				EntityConfig ec = EntityConfig.fromFile(config);
 				entityConfig.put(ec.name, ec);
-			}
-		}
-	}
-	
-	public static void loadTileConfig(File folder) {
-		for(File config : folder.listFiles()) {
-			if(config.getPath().endsWith(".config")) {
-				Tiletype tt = Tiletype.fromFile(config);
-				if(tt.fg) {
-					TilesTab.fgTileTypes.add(tt);
-				} else {
-					TilesTab.bgTileTypes.add(tt);
-				}
 			}
 		}
 	}

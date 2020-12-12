@@ -5,6 +5,7 @@ import java.awt.Point;
 import javax.swing.Icon;
 
 import celesteeditor.data.TileLevelLayer;
+import celesteeditor.ui.autotiler.TerrainType;
 
 public abstract class TileTool {
 	
@@ -18,13 +19,13 @@ public abstract class TileTool {
 	
 	public Icon icon;
 	
-	public abstract boolean[][] getTileOverlay();
+	public abstract char[][] getTileOverlay(char tile);
 	
 	public abstract Point getTileOverlayPos();
 	
-	public abstract void drawAt(TileLevelLayer tileLayer, Tiletype tileType, Point p, MouseAction action);
+	public abstract void drawAt(TileLevelLayer tileLayer, TerrainType tileType, Point p, MouseAction action);
 	
-	public void placeTile(TileLevelLayer tileLayer, Tiletype tileType, Point p) {
+	public void placeTile(TileLevelLayer tileLayer, TerrainType tileType, Point p) {
 		char[][] tileMap = tileLayer.tileMap;
 		
 		if(tileMap.length <= p.y) {
@@ -47,7 +48,7 @@ public abstract class TileTool {
 				tileMap[p.y][i] = row[i];
 			}
 		}
-		tileMap[p.y][p.x] = tileType.tile;
+		tileMap[p.y][p.x] = tileType.ID;
 		tileLayer.img = null;
 	}
 	

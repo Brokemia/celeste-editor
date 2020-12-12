@@ -4,6 +4,7 @@ import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Composite;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
@@ -12,15 +13,28 @@ import java.awt.Stroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 
+import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GLAutoDrawable;
+import com.jogamp.opengl.GLCapabilities;
+import com.jogamp.opengl.GLEventListener;
+import com.jogamp.opengl.GLException;
+import com.jogamp.opengl.GLProfile;
+import com.jogamp.opengl.awt.GLCanvas;
+import com.jogamp.opengl.glu.GLU;
+import com.jogamp.opengl.util.awt.TextureRenderer;
+import com.jogamp.opengl.util.texture.TextureIO;
 import com.text.TextAlignment;
 import com.text.TextRenderer;
 
@@ -32,11 +46,11 @@ import celesteeditor.data.ListLevelLayer;
 import celesteeditor.data.TileLevelLayer;
 import celesteeditor.editing.EntityConfig;
 import celesteeditor.editing.EntityConfig.VisualType;
-import celesteeditor.editing.Tiletype;
 import celesteeditor.ui.EditingPanel.EditPanel;
+import celesteeditor.ui.autotiler.Autotiler.Behaviour;
 import celesteeditor.util.Util;
 
-public class MapPanel extends JPanel {
+public class MapPanel extends JPanel implements GLEventListener {
 	
 	public enum LevelEdge {
 		None, Left, Right, Top, Bottom
@@ -54,6 +68,10 @@ public class MapPanel extends JPanel {
 	
 	public Decal selectedDecal;
 	
+	public Thread mapRenderThread;
+	
+	public Lock lock = new ReentrantLock();
+	
 	// -1 = no node selected
 	public int selectedNode = -1;
 	
@@ -67,7 +85,7 @@ public class MapPanel extends JPanel {
 	
 	public boolean firstDraw = true;
 	
-	public boolean redrawEverything = false;
+	public boolean redrawEverything = true;
 	
 	public boolean ctrlPressed;
 	
@@ -77,12 +95,32 @@ public class MapPanel extends JPanel {
 		
 	public static BufferedImage defaultEntityImg;
 	
+	//getting the capabilities object of GL2 profile
+    final private GLProfile profile;
+    
+    final private GLCapabilities capabilities;
+    
+    final public GLCanvas glcanvas;
+    
+    final private GLU glu = new GLU();
+	
 	static {
 		defaultEntityImgPath = "/assets/defaultentity.png";
 		defaultEntityImg = Util.getImage(defaultEntityImgPath);
 	}
 	
 	public MapPanel() {
+		// OpenGL CAPABILITIES
+        profile = GLProfile.get(GLProfile.GL2);
+        capabilities = new GLCapabilities(profile);
+
+        // CANVAS
+        glcanvas = new GLCanvas(capabilities);
+        glcanvas.addGLEventListener(this);
+        glcanvas.setSize(200, 200);
+
+        add(glcanvas);
+		
 		MapMouseListener mouseListener = new MapMouseListener(this);
 		addMouseListener(mouseListener);
 		addMouseMotionListener(mouseListener);
@@ -157,10 +195,6 @@ public class MapPanel extends JPanel {
 					selectedDecal = null;
 				}
 			}});
-		TilesTab.fgTileTypes.add(new Tiletype("Air", true, (char)0, new Color(0, 0, 0, 0)));
-		TilesTab.fgTileTypes.add(new Tiletype("Air", true, '0', new Color(0, 0, 0, 0)));
-		TilesTab.bgTileTypes.add(new Tiletype("Air", false, (char)0, new Color(0, 0, 0, 0)));
-		TilesTab.bgTileTypes.add(new Tiletype("Air", false, '0', new Color(0, 0, 0, 0)));
 	}
 	
 	public void setZoom(int zoom) {
@@ -187,6 +221,257 @@ public class MapPanel extends JPanel {
 	}
 	
 	@Override
+    public void display(GLAutoDrawable drawable) {
+        final GL2 gl = drawable.getGL().getGL2();
+        
+		 /*gl.glClear(GL2.GL_COLOR_BUFFER_BIT | GL2.GL_DEPTH_BUFFER_BIT);     // Clear The Screen And The Depth Buffer
+		    gl.glLoadIdentity();                       // Reset The View
+		    gl.glTranslatef(0f, 0f, -5.0f);
+		    gl.glRotatef(0, 1.0f, 0.0f, 0.0f);
+		    gl.glRotatef(0, 0.0f, 1.0f, 0.0f);
+		    gl.glRotatef(0, 0.0f, 0.0f, 1.0f);
+		    try {
+				gl.glBindTexture(GL2.GL_TEXTURE_2D, TextureIO.newTexture(new File("./bin/assets/add.png"), true).getTextureObject(gl));
+			} catch (GLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		    gl.glBegin(GL2.GL_QUADS);
+	        // Front Face
+	        gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(-1.0f, -1.0f,  1.0f);
+	        gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f( 1.0f, -1.0f,  1.0f);
+	        gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f( 1.0f,  1.0f,  1.0f);
+	        gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(-1.0f,  1.0f,  1.0f);
+	        // Back Face
+	        gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(-1.0f, -1.0f, -1.0f);
+	        gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(-1.0f,  1.0f, -1.0f);
+	        gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f( 1.0f,  1.0f, -1.0f);
+	        gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f( 1.0f, -1.0f, -1.0f);
+	        // Top Face
+	        gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(-1.0f,  1.0f, -1.0f);
+	        gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(-1.0f,  1.0f,  1.0f);
+	        gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f( 1.0f,  1.0f,  1.0f);
+	        gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f( 1.0f,  1.0f, -1.0f);
+	        // Bottom Face
+	        gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(-1.0f, -1.0f, -1.0f);
+	        gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f( 1.0f, -1.0f, -1.0f);
+	        gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f( 1.0f, -1.0f,  1.0f);
+	        gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(-1.0f, -1.0f,  1.0f);
+	        // Right face
+	        gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f( 1.0f, -1.0f, -1.0f);
+	        gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f( 1.0f,  1.0f, -1.0f);
+	        gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f( 1.0f,  1.0f,  1.0f);
+	        gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f( 1.0f, -1.0f,  1.0f);
+	        // Left Face
+	        gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(-1.0f, -1.0f, -1.0f);
+	        gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(-1.0f, -1.0f,  1.0f);
+	        gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(-1.0f,  1.0f,  1.0f);
+	        gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(-1.0f,  1.0f, -1.0f);
+	      gl.glEnd();
+		    gl.glFlush();*/
+        
+        //renderingComplete = false;
+        
+        gl.glClear(GL2.GL_COLOR_BUFFER_BIT | GL2.GL_DEPTH_BUFFER_BIT);
+        gl.glLoadIdentity();
+        gl.glTranslatef(0, 0, -2);
+        TextureRenderer renderer = new TextureRenderer(200, 200, true);
+        //gl.glBindTexture(GL2.GL_TEXTURE_2D, renderer.getTexture().getTextureObject(gl));
+        paintComponent(renderer.createGraphics());
+        renderer.beginOrthoRendering(200, 200);
+        renderer.drawOrthoRect(0, 0);
+        renderer.endOrthoRendering();
+        gl.glFlush();
+        //gl.glBindTexture(GL2.GL_TEXTURE_2D, renderer.getTexture().getTextureObject(gl));
+//        try {
+//			gl.glBindTexture(GL2.GL_TEXTURE_2D, TextureIO.newTexture(new File("./bin/assets/add.png"), true).getTextureObject(gl));
+//		} catch (GLException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		gl.glBegin(GL2.GL_QUADS);
+//		
+//		gl.glTexCoord2f(0, 1); gl.glVertex2f(-1, -1);//gl.glVertex2f(level.bounds.x, level.bounds.y);
+//		gl.glTexCoord2f(1, 1); gl.glVertex2f(1, -1);//gl.glVertex2f(level.bounds.x - level.bounds.width, level.bounds.y);
+//		gl.glTexCoord2f(1, 0); gl.glVertex2f(1, 1);//gl.glVertex2f(level.bounds.x - level.bounds.width, level.bounds.y - level.bounds.height);
+//		gl.glTexCoord2f(0, 0); gl.glVertex2f(-1, 1);//gl.glVertex2f(level.bounds.x, level.bounds.y - level.bounds.height);
+//		
+//		gl.glEnd();
+//		gl.glFlush();
+//        Main.loadedMap.levels.get(0).roomCanvas.beginOrthoRendering(100, 100);
+//        Main.loadedMap.levels.get(0).roomCanvas.drawOrthoRect(0, 100);
+//        Main.loadedMap.levels.get(0).roomCanvas.endOrthoRendering();
+        //gl.glTranslated(offset.x, -offset.y, 0);
+        //gl.glScaled(actualZoom, actualZoom, 1);
+        
+        /*if(Main.loadedMap != null) {
+			//lock.lock();
+			for(Level level : Main.loadedMap.levels) {
+				if(level.roomCanvas == null) {
+					level.roomCanvas = new TextureRenderer(level.bounds.width, level.bounds.height, true);//new BufferedImage(level.bounds.width, level.bounds.height, BufferedImage.TYPE_INT_ARGB);
+				}
+				//g.drawImage(level.roomCanvas, level.bounds.x, level.bounds.y, null);
+				//gl.glBindTexture(GL2.GL_TEXTURE_2D, level.roomCanvas.getTexture().getTextureObject(gl));
+//				gl.glBegin(GL2.GL_QUADS);
+//				
+//				gl.glTexCoord2f(0, 0); gl.glVertex2f(-1, -1);//gl.glVertex2f(level.bounds.x, level.bounds.y);
+//				gl.glTexCoord2f(1, 0); gl.glVertex2f(1, -1);//gl.glVertex2f(level.bounds.x - level.bounds.width, level.bounds.y);
+//				gl.glTexCoord2f(1, 1); gl.glVertex2f(1, 1);//gl.glVertex2f(level.bounds.x - level.bounds.width, level.bounds.y - level.bounds.height);
+//				gl.glTexCoord2f(0, 1); gl.glVertex2f(-1, 1);//gl.glVertex2f(level.bounds.x, level.bounds.y - level.bounds.height);
+//				
+//				gl.glEnd();
+//				gl.glFlush();
+//			    gl.glTranslatef(0f, 0f, -5.0f);
+//			    gl.glRotatef(0, 1.0f, 0.0f, 0.0f);
+//			    gl.glRotatef(0, 0.0f, 1.0f, 0.0f);
+//			    gl.glRotatef(0, 0.0f, 0.0f, 1.0f);
+//			    try {
+//				gl.glBindTexture(GL2.GL_TEXTURE_2D, TextureIO.newTexture(new File("./bin/assets/add.png"), true).getTextureObject(gl));
+//			} catch (GLException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+			    level.roomCanvas.beginOrthoRendering(100, 100);
+			    level.roomCanvas.drawOrthoRect(0, 100);
+			    level.roomCanvas.endOrthoRendering();
+			    
+//			    level.roomCanvas.beginOrthoRendering(1000, 1000);
+//			    level.roomCanvas.markDirty(0, 0, 100, 100);
+//			level.roomCanvas.drawOrthoRect(0, 0);
+				//gl.glBindTexture(GL2.GL_TEXTURE_2D, level.roomCanvas.getTexture().getTextureObject(gl));
+			
+				
+			    gl.glBegin(GL2.GL_QUADS);
+		        // Front Face
+		        gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(-1.0f, -1.0f,  1.0f);
+		        gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f( 1.0f, -1.0f,  1.0f);
+		        gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f( 1.0f,  1.0f,  1.0f);
+		        gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(-1.0f,  1.0f,  1.0f);
+		        // Back Face
+		        gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(-1.0f, -1.0f, -1.0f);
+		        gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(-1.0f,  1.0f, -1.0f);
+		        gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f( 1.0f,  1.0f, -1.0f);
+		        gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f( 1.0f, -1.0f, -1.0f);
+		        // Top Face
+		        gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(-1.0f,  1.0f, -1.0f);
+		        gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(-1.0f,  1.0f,  1.0f);
+		        gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f( 1.0f,  1.0f,  1.0f);
+		        gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f( 1.0f,  1.0f, -1.0f);
+		        // Bottom Face
+		        gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(-1.0f, -1.0f, -1.0f);
+		        gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f( 1.0f, -1.0f, -1.0f);
+		        gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f( 1.0f, -1.0f,  1.0f);
+		        gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(-1.0f, -1.0f,  1.0f);
+		        // Right face
+		        gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f( 1.0f, -1.0f, -1.0f);
+		        gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f( 1.0f,  1.0f, -1.0f);
+		        gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f( 1.0f,  1.0f,  1.0f);
+		        gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f( 1.0f, -1.0f,  1.0f);
+		        // Left Face
+		        gl.glTexCoord2f(0.0f, 0.0f); gl.glVertex3f(-1.0f, -1.0f, -1.0f);
+		        gl.glTexCoord2f(1.0f, 0.0f); gl.glVertex3f(-1.0f, -1.0f,  1.0f);
+		        gl.glTexCoord2f(1.0f, 1.0f); gl.glVertex3f(-1.0f,  1.0f,  1.0f);
+		        gl.glTexCoord2f(0.0f, 1.0f); gl.glVertex3f(-1.0f,  1.0f, -1.0f);
+		      gl.glEnd();
+		      gl.glFlush();
+		      return;
+			}
+			
+//			if(mapRenderThread == null) {
+//				mapRenderThread = new Thread(new MapRenderThread());
+//				mapRenderThread.start();
+//			}
+//			drawFillers(g);
+//			drawTiles(g, false);
+//			drawDecals(g, false);
+//			drawEntities(g);
+//			drawTiles(g, true);
+//			drawDecals(g, true);
+//			drawTriggers(g);
+//			drawRooms(g);
+//			drawSelectionBox(g);
+			
+			firstDraw = false;
+			//lock.unlock();
+		}
+		
+		renderingComplete = true;
+
+        //drawing the base
+        gl.glBegin(GL2.GL_LINES);
+        gl.glVertex3f(-0.50f, -0.50f, 0);
+        gl.glVertex3f(0.50f, -0.50f, 0);
+        gl.glEnd();
+
+        //drawing the right edge
+        gl.glBegin(GL2.GL_LINES);
+        gl.glVertex3f(0f, 0.50f, 0);
+        gl.glVertex3f(-0.50f, -0.50f, 0);
+        gl.glEnd();
+
+        //drawing the lft edge
+        gl.glBegin(GL2.GL_LINES);
+        gl.glVertex3f(0f, 0.50f, 0);
+        gl.glVertex3f(0.50f, -0.50f, 0);
+        gl.glEnd();*/
+        
+        
+    }
+
+	@Override
+	public void dispose(GLAutoDrawable drawable) {
+	}
+
+	@Override
+	public void init(GLAutoDrawable drawable) {
+		final GL2 gl = drawable.getGL().getGL2();
+		
+		if(Main.loadedMap != null) {
+			for(Level level : Main.loadedMap.levels) {
+				if(level.roomCanvas == null) {
+					level.roomCanvas = new TextureRenderer(level.bounds.width, level.bounds.height, true);//new BufferedImage(level.bounds.width, level.bounds.height, BufferedImage.TYPE_INT_ARGB);
+				}
+			}
+		}
+		gl.glShadeModel(GL2.GL_SMOOTH);
+		gl.glClearColor(0f, 0f, 0f, 0f);
+		gl.glClearDepth(1.0f);
+		gl.glEnable(GL2.GL_DEPTH_TEST);
+		gl.glDepthFunc(GL2.GL_LEQUAL);
+		gl.glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT, GL2.GL_NICEST);
+		
+		gl.glClearColor(0f, 0f, 0f, 0f);
+		gl.glClearDepth(1f);
+		gl.glEnable(GL2.GL_TEXTURE_2D);
+		
+		repaint();
+	}
+
+	@Override
+	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
+		final GL2 gl = drawable.getGL().getGL2();
+		 
+		if(height <=0)
+			height =1;
+		final float h = (float) width / (float) height;
+		gl.glViewport(0, 0, width, height);
+		gl.glMatrixMode(GL2.GL_PROJECTION);
+		gl.glLoadIdentity();
+		glu.gluPerspective(45.0f, h, 1.0, 20.0);
+		gl.glMatrixMode(GL2.GL_MODELVIEW);
+		gl.glLoadIdentity();
+	}
+	
+	@Override
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		renderingComplete = false;
@@ -195,19 +480,18 @@ public class MapPanel extends JPanel {
 		g.translate(offset.x, offset.y);
 		
 		if(Main.loadedMap != null) {
+			lock.lock();
 			for(Level level : Main.loadedMap.levels) {
 				if(level.roomCanvas == null) {
-					level.roomCanvas = new BufferedImage(level.bounds.width, level.bounds.height, BufferedImage.TYPE_INT_ARGB);
+					//level.roomCanvas = new TextureRenderer(level.bounds.width, level.bounds.height, true);//new BufferedImage(level.bounds.width, level.bounds.height, BufferedImage.TYPE_INT_ARGB);
+					return;
 				}
-				if(level != selectedLevel) {
-					g.drawImage(level.roomCanvas, level.bounds.x, level.bounds.y, null);
-				} else {
-					Graphics2D g2d = level.roomCanvas.createGraphics();
-					Composite old = g2d.getComposite();
-					g2d.setComposite(AlphaComposite.Clear);
-					g2d.fillRect(0, 0, level.roomCanvas.getWidth(), level.roomCanvas.getHeight());
-					g2d.setComposite(old);
-				}
+				g.drawImage(level.roomCanvas.getImage(), level.bounds.x, level.bounds.y, null);
+			}
+			
+			if(mapRenderThread == null) {
+				mapRenderThread = new Thread(new MapRenderThread());
+				mapRenderThread.start();
 			}
 			long start = System.currentTimeMillis();
 			drawFillers(g);
@@ -238,6 +522,7 @@ public class MapPanel extends JPanel {
 			//System.out.println("Selection Box: " + (System.currentTimeMillis() - start));
 			
 			firstDraw = false;
+			lock.unlock();
 		}
 		
 		renderingComplete = true;
@@ -257,60 +542,46 @@ public class MapPanel extends JPanel {
 		if(firstDraw || redrawEverything) {
 			for(Level level : Main.loadedMap.levels) {
 				if(level != selectedLevel) {
-					Graphics imgG = level.roomCanvas.getGraphics();
+					Graphics imgG = level.roomCanvas.createGraphics();
 					imgG.translate(-level.bounds.x, -level.bounds.y);
 					drawTiles(imgG, level, fg);
 				}
 			}
 		}
-		
-		if(selectedLevel != null) {
-			Graphics imgG = selectedLevel.roomCanvas.getGraphics();
-			imgG.translate(-selectedLevel.bounds.x, -selectedLevel.bounds.y);
-			drawTiles(imgG, selectedLevel, fg);
-			drawTiles(g, selectedLevel, fg);
-		}
 	}
 	
-	private void drawTiles(Graphics g, Level level, boolean fg) {
+	public void drawTiles(Graphics g, Level level, boolean fg) {
 		Main.bgAutotiler.rand = new Random(level.name.hashCode());
 		Main.fgAutotiler.rand = new Random(level.name.hashCode());
 		
 		TileLevelLayer tiles = fg ? level.solids : level.bg;
-		if(tiles.img == null) {
+		//if(tiles.img == null) {
 			tiles.img = new BufferedImage(level.bounds.width, level.bounds.height, BufferedImage.TYPE_INT_ARGB);
 			Graphics imgG = tiles.img.createGraphics();
 			tiles.tileImgs = (fg ? Main.fgAutotiler : Main.bgAutotiler).generateMap(tiles, true).tileImg;
 			for(int i = 0; i < tiles.tileImgs.length; i++) {
 				for(int j = 0; j < tiles.tileImgs[i].length; j++) {
-					imgG.drawImage(tiles.tileImgs[i][j], j * 8, i * 8, null);
+					g.drawImage(tiles.tileImgs[i][j], level.bounds.x + j * 8, level.bounds.y + i * 8, null);
 				}
 			}
-		}
+		//}
 		
-		g.drawImage(tiles.img, level.bounds.x, level.bounds.y, null);
+		//g.drawImage(tiles.img, level.bounds.x, level.bounds.y, null);
 	}
 	
 	public void drawDecals(Graphics g, boolean fg) {
 		if(firstDraw || redrawEverything) {
 			for(Level level : Main.loadedMap.levels) {
 				if(level != selectedLevel) {
-					Graphics imgG = level.roomCanvas.getGraphics();
+					Graphics imgG = level.roomCanvas.createGraphics();
 					imgG.translate(-level.bounds.x, -level.bounds.y);
 					drawDecals(imgG, level, fg);
 				}
 			}
 		}
-		
-		if(selectedLevel != null) {
-			Graphics imgG = selectedLevel.roomCanvas.getGraphics();
-			imgG.translate(-selectedLevel.bounds.x, -selectedLevel.bounds.y);
-			drawDecals(imgG, selectedLevel, fg);
-			drawDecals(g, selectedLevel, fg);
-		}
 	}
 	
-	private void drawDecals(Graphics g, Level level, boolean fg) {
+	public void drawDecals(Graphics g, Level level, boolean fg) {
 		ListLevelLayer decals = (fg ? level.fgDecals : level.bgDecals);
 		if(decals != null) {
 			for(int i = 0; i < decals.items.size(); i++) {
@@ -334,16 +605,9 @@ public class MapPanel extends JPanel {
 				}
 			}
 		}
-		
-		if(selectedLevel != null) {
-			Graphics2D imgG = selectedLevel.roomCanvas.createGraphics();
-			imgG.translate(-selectedLevel.bounds.x, -selectedLevel.bounds.y);
-			drawEntities(imgG, selectedLevel, alpha);
-			drawEntities((Graphics2D)g, selectedLevel, alpha);
-		}
 	}
 	
-	private void drawEntities(Graphics2D g2d, Level level, AlphaComposite alpha) {
+	public void drawEntities(Graphics2D g2d, Level level, AlphaComposite alpha) {
 		for(int i = 0; i < level.entities.items.size(); i++) {
 			Entity e = (Entity)level.entities.items.get(i);
 			EntityConfig ec = Main.entityConfig.get(e.name);
@@ -419,23 +683,18 @@ public class MapPanel extends JPanel {
 				}
 			}
 		}
-		
-		if(selectedLevel != null) {
-			Graphics2D imgG = selectedLevel.roomCanvas.createGraphics();
-			imgG.translate(-selectedLevel.bounds.x, -selectedLevel.bounds.y);
-			drawTriggers(imgG, selectedLevel, alpha);
-			drawTriggers((Graphics2D)g, selectedLevel, alpha);
-		}
 	}
 	
-	private void drawTriggers(Graphics2D g2d, Level level, AlphaComposite alpha) {
+	public void drawTriggers(Graphics2D g2d, Level level, AlphaComposite alpha) {
+		Font font = new Font(getFont().getName(), getFont().getStyle(), getFont().getSize() * 3 / 4);
 		for(int i = 0; i < level.triggers.items.size(); i++) {
 			Entity e = (Entity)level.triggers.items.get(i);
 			Rectangle triggerBounds = new Rectangle(e.x + level.bounds.x, e.y + level.bounds.y, e.getPropertyValue("width", 8), e.getPropertyValue("height", 8));
 			g2d.setColor(new Color(200, 0, 0, 100));
 			g2d.fillRect(triggerBounds.x, triggerBounds.y, triggerBounds.width, triggerBounds.height);
 			g2d.setColor(Color.black);
-			TextRenderer.drawString(g2d, e.name, getFont(), g2d.getColor(), triggerBounds, TextAlignment.MIDDLE);
+			
+			TextRenderer.drawString(g2d, e.name, font, g2d.getColor(), triggerBounds, TextAlignment.MIDDLE);
 			g2d.setColor(Color.darkGray);
 			g2d.drawRect(triggerBounds.x, triggerBounds.y, triggerBounds.width, triggerBounds.height);
 			
@@ -461,19 +720,19 @@ public class MapPanel extends JPanel {
 				g.setColor(darkColor);
 				g.fillRect(level.bounds.x, level.bounds.y, level.bounds.width, level.bounds.height);
 				g.setColor(Color.black);
-			} else if(Main.editingPanel.tiles.selectedTileTool != null && Main.editingPanel.getCurrentPanel() == EditPanel.Tiles) {
+			} else if(Main.editingPanel.tiles.selectedTileTool != null && Main.editingPanel.getCurrentPanel() == EditPanel.Tiles && Main.editingPanel.tiles.selectedTiletype != null && !Main.editingPanel.tiles.selectedTiletype.name.equalsIgnoreCase("air")) {
 				// TODO draw entity preview
 				// Draw brush preview
-				boolean[][] tileOverlay = Main.editingPanel.tiles.selectedTileTool.getTileOverlay();
+				char[][] tileOverlay = Main.editingPanel.tiles.selectedTileTool.getTileOverlay(Main.editingPanel.tiles.selectedTiletype.ID);
 				Point tileOverlayPos = Main.editingPanel.tiles.selectedTileTool.getTileOverlayPos();
-				if(tileOverlay != null && tileOverlayPos != null && Main.editingPanel.tiles.selectedTiletype != null) {
-					for(int i = 0; i < tileOverlay.length; i++) {
-						for(int j = 0; j < tileOverlay[i].length; j++) {
-							if(i + tileOverlayPos.y >= 0 && j + tileOverlayPos.x >= 0 && i + tileOverlayPos.y < level.bounds.height / 8 && j + tileOverlayPos.x < level.bounds.width / 8) {
-								if(tileOverlay[i][j]) {
-									g.setColor(Main.editingPanel.tiles.selectedTiletype.color);
-									g.fillRect(level.bounds.x + (j + tileOverlayPos.x) * 8, level.bounds.y + (i + tileOverlayPos.y) * 8, 8, 8);
-								}
+				if(tileOverlay != null && tileOverlayPos != null) {
+					TileLevelLayer layer = new TileLevelLayer(tileOverlay.length == 0 ? 0 : tileOverlay[0].length, tileOverlay.length);
+					layer.tileMap = tileOverlay;
+					BufferedImage[][] overlayImages = (Main.editingPanel.tiles.selectedFg ? Main.fgAutotiler : Main.bgAutotiler).generateMap(layer, new Behaviour()).tileImg;
+					for(int i = 0; i < overlayImages.length; i++) {
+						for(int j = 0; j < overlayImages[i].length; j++) {
+							if(overlayImages[i][j] != null && i + tileOverlayPos.y >= 0 && j + tileOverlayPos.x >= 0 && i + tileOverlayPos.y < level.bounds.height / 8 && j + tileOverlayPos.x < level.bounds.width / 8) {
+								g.drawImage(overlayImages[i][j], level.bounds.x + (j + tileOverlayPos.x) * 8, level.bounds.y + (i + tileOverlayPos.y) * 8, 8, 8, null);
 							}
 						}
 					}

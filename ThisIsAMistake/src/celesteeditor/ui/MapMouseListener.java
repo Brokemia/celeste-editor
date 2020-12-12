@@ -604,7 +604,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 				}
 				Point tileCoords = new Point((int)((screenPos.x -  lBounds.x) / panel.getActualZoom() / 8), (int)((screenPos.y - lBounds.y) / panel.getActualZoom() / 8));
 				if(Main.editingPanel.tiles.selectedTiletype != null && Main.editingPanel.tiles.selectedTileTool != null) {
-					if(Main.editingPanel.tiles.selectedTiletype.fg) {
+					if(Main.editingPanel.tiles.selectedFg) {
 						Main.editingPanel.tiles.selectedTileTool.drawAt(level.solids, Main.editingPanel.tiles.selectedTiletype, tileCoords, action);
 					} else {
 						Main.editingPanel.tiles.selectedTileTool.drawAt(level.bg, Main.editingPanel.tiles.selectedTiletype, tileCoords, action);
