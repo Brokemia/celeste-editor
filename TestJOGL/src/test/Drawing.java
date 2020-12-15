@@ -1,4 +1,4 @@
-package celesteeditor.util;
+package test;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;

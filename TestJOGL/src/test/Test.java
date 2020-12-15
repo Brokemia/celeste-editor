@@ -3,6 +3,7 @@ package test;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.DisplayMode;
+import java.awt.Graphics2D;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Point;
@@ -13,6 +14,8 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
+import java.nio.CharBuffer;
+import java.nio.IntBuffer;
 
 import javax.swing.AbstractAction;
 import javax.swing.ActionMap;
@@ -21,12 +24,17 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 
+import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL2;
+import com.jogamp.opengl.GL2ES1;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
+import com.jogamp.opengl.GLException;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
+import com.jogamp.opengl.fixedfunc.GLLightingFunc;
+import com.jogamp.opengl.fixedfunc.GLMatrixFunc;
 import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.util.FPSAnimator;
 import com.jogamp.opengl.util.texture.Texture;
@@ -38,6 +46,7 @@ public class Test implements GLEventListener {
 	public static DisplayMode dm, dm_old;
 	private static Dimension xgraphic;
 	private static Point point = new Point(0, 0);
+	private static JFrame frame;
 	
 	private GLU glu = new GLU();
 	
@@ -46,7 +55,10 @@ public class Test implements GLEventListener {
 	
 	@Override
 	public void display(GLAutoDrawable drawable) {
-		// TODO Auto-generated method stub
+		dispSquare(drawable);
+	}
+	
+	private void dispRotatingCube(GLAutoDrawable drawable) {
 		final GL2 gl = drawable.getGL().getGL2();
 		 gl.glClear(GL2.GL_COLOR_BUFFER_BIT | GL2.GL_DEPTH_BUFFER_BIT);     // Clear The Screen And The Depth Buffer
 		    gl.glLoadIdentity();                       // Reset The View
@@ -91,7 +103,83 @@ public class Test implements GLEventListener {
 		    xrot+=.3f;
 		    yrot+=.2f;
 		    zrot+=.4;
+	}
+	
+	private void dispSquare(GLAutoDrawable drawable) {
+		final GL2 gl = drawable.getGL().getGL2();
+        
+        //renderingComplete = false;
+        
+        gl.glClear(GL2.GL_COLOR_BUFFER_BIT | GL2.GL_DEPTH_BUFFER_BIT);
+        final int attribBits = GL2.GL_ENABLE_BIT | GL2.GL_TEXTURE_BIT | GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT | GL2.GL_TRANSFORM_BIT;
+	    gl.glPushAttrib(attribBits);
+	    gl.glDisable(GLLightingFunc.GL_LIGHTING);
+        gl.glDisable(GL.GL_DEPTH_TEST);
+        gl.glDisable(GL.GL_CULL_FACE);
+        
+        gl.glMatrixMode(GLMatrixFunc.GL_PROJECTION);
+	    gl.glPushMatrix();
+	    gl.glLoadIdentity();
+	    glu.gluOrtho2D(0, 800, 0, 800);
+	    gl.glMatrixMode(GLMatrixFunc.GL_MODELVIEW);
+	    gl.glPushMatrix();
+	    gl.glLoadIdentity();
+	    gl.glMatrixMode(GL.GL_TEXTURE);
+        gl.glPushMatrix();
+        gl.glLoadIdentity();
+        gl.glEnable(GL.GL_BLEND);
+        gl.glBlendFunc(GL.GL_ONE, GL.GL_ONE_MINUS_SRC_ALPHA);
+	    gl.glTexEnvi(GL2ES1.GL_TEXTURE_ENV, GL2ES1.GL_TEXTURE_ENV_MODE, GL2ES1.GL_MODULATE);
+        
+        //if(Main.loadedMap != null) {
+			//lock.lock();
+			//for(Level level : Main.loadedMap.levels) {
+	    IntBuffer frameBuffer = IntBuffer.allocate(1);
+	    gl.glGenFramebuffers(1, frameBuffer);
+		gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, frameBuffer.get());
+		IntBuffer texID = IntBuffer.allocate(1);
+		gl.glGenTextures(1, texID);
+		gl.glBindTexture(GL.GL_TEXTURE_2D, texID.get(0));
+		CharBuffer b = CharBuffer.allocate(100 * 100 * 4);
+		gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, 100, 100, 0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, b);
+		Texture roomTex = new Texture(texID.get(0), GL.GL_TEXTURE_2D, 100, 100, 100, 100, false);
+		roomTex.setTexParameteri(gl, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST);
+		roomTex.setTexParameteri(gl, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST);
+		gl.glFramebufferTextureEXT(GL.GL_FRAMEBUFFER, GL.GL_COLOR_ATTACHMENT0, roomTex.getTextureObject(gl), 0);
+		gl.glDrawBuffer(GL.GL_COLOR_ATTACHMENT0);
 		
+		if(gl.glCheckFramebufferStatus(GL.GL_FRAMEBUFFER) != GL.GL_FRAMEBUFFER_COMPLETE) {
+			throw new RuntimeException("Error when initializing frame buffer");
+		}
+		gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
+				Texture tex = null;
+				try {
+					tex = TextureIO.newTexture(new File("../ThisIsAMistake/bin/assets/add.png"), false);
+				} catch (GLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		        Drawing.drawTexture(gl, tex, 0 + 10, 20,
+		        		0, 0, tex.getWidth(), tex.getHeight(), (float)1);
+		        gl.glFlush();
+			//}
+			
+//			if(mapRenderThread == null) {
+//				mapRenderThread = new Thread(new MapRenderThread());
+//				mapRenderThread.start();
+//			}
+		        
+			gl.glBindTexture(GL.GL_TEXTURE_2D, 0);
+			gl.glBegin(GL2.GL_QUADS);
+			gl.glVertex2f(1, 1);
+			gl.glVertex2f(50, 1);
+			gl.glVertex2f(50, 50);
+			gl.glVertex2f(1, 50);
+			gl.glEnd();
+			gl.glFlush();
 	}
 
 	@Override
@@ -131,6 +219,9 @@ public class Test implements GLEventListener {
 		if(height <=0)
 			height =1;
 		final float h = (float) width / (float) height;
+		double dpiScalingFactor = ((Graphics2D)frame.getGraphics()).getTransform().getScaleX();
+		width = (int) (width * dpiScalingFactor);
+		height = (int) (height * dpiScalingFactor);
 		gl.glViewport(0, 0, width, height);
 		gl.glMatrixMode(GL2.GL_PROJECTION);
 		gl.glLoadIdentity();
@@ -155,7 +246,7 @@ public class Test implements GLEventListener {
 		
 		final FPSAnimator animator = new FPSAnimator(glcanvas, 300,true );
 		
-		final JFrame frame = new JFrame ("nehe: Lesson 6");
+		frame = new JFrame ("nehe: Lesson 6");
 		
 		frame.getContentPane().add(glcanvas);
 		
@@ -185,9 +276,7 @@ public class Test implements GLEventListener {
 		int windowY = Math.max(0, (screenSize.height - frame.getHeight()) / 2);
 
 		frame.setLocation(windowX, windowY);
-		/**
-				 * 
-				 */
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setVisible(true);
 		/*
 		 * Time to add Button Control

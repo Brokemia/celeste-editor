@@ -1,11 +1,11 @@
 package celesteeditor.data;
 
 import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import com.jogamp.opengl.util.awt.TextureRenderer;
+import com.jogamp.opengl.util.texture.Texture;
 
 import celesteeditor.BinaryPacker.Element;
 
@@ -63,7 +63,9 @@ public class Level implements ElementEncoded {
 	
 	public IntTileLevelLayer objTiles; // TODO object tiles
 		
-	public TextureRenderer roomCanvas;
+	public IntBuffer frameBuffer = IntBuffer.allocate(1);
+	
+	public Texture roomTexture;
 	
 	public void adjustCanvasSize() {
 		Rectangle bounds = new Rectangle(this.bounds);
