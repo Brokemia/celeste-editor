@@ -1,6 +1,7 @@
 package celesteeditor.editing;
 
 import java.awt.Color;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -8,6 +9,7 @@ import java.util.Scanner;
 
 import celesteeditor.AtlasUnpacker;
 import celesteeditor.ui.MapPanel;
+import celesteeditor.util.TextureArea;
 import celesteeditor.util.Util;
 
 public class EntityConfig {
@@ -24,6 +26,8 @@ public class EntityConfig {
 	
 	private BufferedImage image;
 	
+	private TextureArea textureArea;
+	
 	public int imgOffsetX = 4, imgOffsetY = 8;
 	
 	public Color borderColor = Color.black, fillColor = Color.white;
@@ -38,6 +42,7 @@ public class EntityConfig {
 	
 	public void setImage(BufferedImage img) {
 		image = img;
+		textureArea = null;
 	}
 	
 	public void setImage(String imgPath) {
@@ -53,6 +58,19 @@ public class EntityConfig {
 		if(image == null) {
 			image = MapPanel.defaultEntityImg;
 		}
+		textureArea = null;
+	}
+	
+	public TextureArea getTextureArea() {
+		if(textureArea != null) {
+			return textureArea;
+		}
+		if(imagePath != null && imagePath.startsWith("Gameplay:")) {
+			textureArea = AtlasUnpacker.gameplayTex.get(imagePath.replace('\\', '/').substring("Gameplay:".length()));
+		} else {
+			textureArea = new TextureArea(MapPanel.defaultEntityTex, new Rectangle(0, 0, MapPanel.defaultEntityTex.getWidth(), MapPanel.defaultEntityTex.getHeight()));
+		}
+		return textureArea;
 	}
 	
 	@Override

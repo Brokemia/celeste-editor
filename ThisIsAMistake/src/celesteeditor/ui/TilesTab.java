@@ -43,6 +43,10 @@ public class TilesTab extends JPanel {
 	public boolean selectedFg = true;
 	
 	public TilesTab() {
+		
+	}
+	
+	public void init() {
 		setLayout(new BorderLayout());
 		JPanel toolsPanel = new JPanel();
 		toolsPanel.setLayout(new GridLayout((int)Math.ceil((tileTools.size() + 1) / (float)TOOLS_PER_ROW), TOOLS_PER_ROW));

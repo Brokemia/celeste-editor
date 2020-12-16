@@ -1,5 +1,6 @@
 package celesteeditor.data;
 
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,6 +8,7 @@ import java.util.HashMap;
 import celesteeditor.AtlasUnpacker;
 import celesteeditor.BinaryPacker.Element;
 import celesteeditor.ui.MapPanel;
+import celesteeditor.util.TextureArea;
 import celesteeditor.util.Util;
 
 public class Decal implements ElementEncoded {
@@ -28,8 +30,10 @@ public class Decal implements ElementEncoded {
 	
 	private BufferedImage image;
 	
+	private TextureArea textureArea;
+	
 	public Decal(String tex) {
-		setTexture(tex);
+		setImagePath(tex);
 	}
 	
 	public Decal() {}
@@ -38,7 +42,7 @@ public class Decal implements ElementEncoded {
 		return texture;
 	}
 	
-	public void setTexture(String path) {
+	public void setImagePath(String path) {
 		image = AtlasUnpacker.gameplay.get("decals/" + path.replace('\\', '/'));
 		if(image == null) {
 			image = Util.getImage("/" + path.replace('\\', '/'));
@@ -47,10 +51,20 @@ public class Decal implements ElementEncoded {
 		if(image == null) {
 			image = MapPanel.defaultEntityImg;
 		}
+		textureArea = null;
 	}
 	
 	public BufferedImage getImage() {
 		return image;
+	}
+	
+	public TextureArea getTextureArea() {
+		if(textureArea != null) return textureArea;
+		textureArea = AtlasUnpacker.gameplayTex.get("decals/" + texture.replace('\\', '/'));
+		if(textureArea == null) {
+			textureArea = new TextureArea(MapPanel.defaultEntityTex, new Rectangle(0, 0, MapPanel.defaultEntityTex.getWidth(), MapPanel.defaultEntityTex.getHeight()));
+		}
+		return textureArea;
 	}
 	
 	@Override
@@ -77,7 +91,7 @@ public class Decal implements ElementEncoded {
 		y = (int)tempY;
 		scaleX = element.AttrInt("scaleX", 1);
 		scaleY = element.AttrInt("scaleY", 1);
-		setTexture(element.Attr("texture"));
+		setImagePath(element.Attr("texture"));
 		return this;
 	}
 

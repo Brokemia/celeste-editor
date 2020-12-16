@@ -12,13 +12,11 @@ import java.awt.Rectangle;
 import java.awt.Stroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.CharBuffer;
 import java.nio.IntBuffer;
-import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -34,18 +32,17 @@ import com.jogamp.opengl.GL2ES1;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
-import com.jogamp.opengl.GLException;
 import com.jogamp.opengl.GLProfile;
 import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.fixedfunc.GLLightingFunc;
 import com.jogamp.opengl.fixedfunc.GLMatrixFunc;
 import com.jogamp.opengl.glu.GLU;
+import com.jogamp.opengl.util.awt.TextRenderer;
 import com.jogamp.opengl.util.awt.TextureRenderer;
 import com.jogamp.opengl.util.texture.Texture;
-import com.jogamp.opengl.util.texture.TextureIO;
 import com.text.TextAlignment;
-import com.text.TextRenderer;
 
+import celesteeditor.AtlasUnpacker;
 import celesteeditor.Main;
 import celesteeditor.data.Decal;
 import celesteeditor.data.Entity;
@@ -57,6 +54,7 @@ import celesteeditor.editing.EntityConfig.VisualType;
 import celesteeditor.ui.EditingPanel.EditPanel;
 import celesteeditor.ui.autotiler.Autotiler.Behaviour;
 import celesteeditor.util.Drawing;
+import celesteeditor.util.TextureArea;
 import celesteeditor.util.Util;
 
 public class MapPanel extends JPanel implements GLEventListener {
@@ -104,14 +102,18 @@ public class MapPanel extends JPanel implements GLEventListener {
 		
 	public static BufferedImage defaultEntityImg;
 	
+	public static Texture defaultEntityTex;
+	
 	//getting the capabilities object of GL2 profile
-    final private GLProfile profile;
+	private final GLProfile profile;
     
-    final private GLCapabilities capabilities;
+	private final GLCapabilities capabilities;
     
-    final public GLCanvas glcanvas;
+	public final GLCanvas glcanvas;
     
-    final private GLU glu = new GLU();
+	private final GLU glu = new GLU();
+    
+    private TextRenderer textRenderer;
 	
 	static {
 		defaultEntityImgPath = "/assets/defaultentity.png";
@@ -126,7 +128,7 @@ public class MapPanel extends JPanel implements GLEventListener {
         // CANVAS
         glcanvas = new GLCanvas(capabilities);
         glcanvas.addGLEventListener(this);
-        glcanvas.setSize(200, 200);
+        glcanvas.setSize(400, 400);
 
         add(glcanvas);
 		
@@ -235,14 +237,11 @@ public class MapPanel extends JPanel implements GLEventListener {
 		IntBuffer texID = IntBuffer.allocate(1);
 		gl.glGenTextures(1, texID);
 		gl.glBindTexture(GL.GL_TEXTURE_2D, texID.get(0));
-		CharBuffer b = CharBuffer.allocate(level.bounds.width * level.bounds.height * 4);
-		gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, level.bounds.width, level.bounds.height, 0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, b);
+		gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, level.bounds.width, level.bounds.height, 0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, null);
 		level.roomTexture = new Texture(texID.get(0), GL.GL_TEXTURE_2D, level.bounds.width, level.bounds.height, level.bounds.width, level.bounds.height, false);
 		level.roomTexture.setTexParameteri(gl, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST);
 		level.roomTexture.setTexParameteri(gl, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST);
 		gl.glFramebufferTexture2D(GL.GL_FRAMEBUFFER, GL.GL_COLOR_ATTACHMENT0, GL.GL_TEXTURE_2D, level.roomTexture.getTextureObject(gl), 0);
-		//gl.glFramebufferTextureEXT(GL.GL_FRAMEBUFFER, GL.GL_COLOR_ATTACHMENT0, level.roomTexture.getTextureObject(gl), 0);
-		//gl.glDrawBuffer(GL.GL_COLOR_ATTACHMENT0);
 		
 		if(gl.glCheckFramebufferStatus(GL.GL_FRAMEBUFFER) != GL.GL_FRAMEBUFFER_COMPLETE) {
 			throw new RuntimeException("Error when initializing frame buffer");
@@ -252,6 +251,7 @@ public class MapPanel extends JPanel implements GLEventListener {
 	
 	@Override
     public void display(GLAutoDrawable drawable) {
+		final Rectangle orthoView = new Rectangle(0, 0, 800, 800);
         final GL2 gl = drawable.getGL().getGL2();
         
         //renderingComplete = false;
@@ -266,7 +266,7 @@ public class MapPanel extends JPanel implements GLEventListener {
         gl.glMatrixMode(GLMatrixFunc.GL_PROJECTION);
 	    gl.glPushMatrix();
 	    gl.glLoadIdentity();
-	    glu.gluOrtho2D(0, 800, 0, 800);
+	    glu.gluOrtho2D(orthoView.x, orthoView.x + orthoView.width, orthoView.y, orthoView.y + orthoView.height);
 	    gl.glMatrixMode(GLMatrixFunc.GL_MODELVIEW);
 	    gl.glPushMatrix();
 	    gl.glLoadIdentity();
@@ -279,19 +279,10 @@ public class MapPanel extends JPanel implements GLEventListener {
 	    gl.glColor3f(1, 1, 1);
         
         if(Main.loadedMap != null) {
-			//lock.lock();
 			for(Level level : Main.loadedMap.levels) {
 				if(level.frameBuffer == null || level.roomTexture == null) {
 					// Setup the framebuffer and texture for the room if necessary
 					createLevelFrameBuffer(gl, level);
-				}
-				Texture tex = null;
-				try {
-					tex = TextureIO.newTexture(new File("bin/assets/add.png"), false);
-				} catch (GLException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
 				}
 		        Drawing.drawTexture(gl, level.roomTexture, offset.x + level.bounds.x, -offset.y - level.bounds.y - level.bounds.height,
 		        		0, 0, level.roomTexture.getWidth(), level.roomTexture.getHeight(), (float)actualZoom);
@@ -310,17 +301,16 @@ public class MapPanel extends JPanel implements GLEventListener {
 			gl.glEnd();
 			drawFillers(gl);
 			drawTiles(gl, false);
-//			drawDecals(g, false);
-//			drawEntities(g);
+			drawDecals(gl, false);
+			drawEntities(gl);
 			drawTiles(gl, true);
-//			drawDecals(g, true);
-//			drawTriggers(g);
+			drawDecals(gl, true);
+			drawTriggers(gl);
 			drawRooms(gl);
 //			drawSelectionBox(g);
 			
 			firstDraw = false;
 			gl.glFlush();
-			//lock.unlock();
 		}
 		
 		//renderingComplete = true;
@@ -355,20 +345,25 @@ public class MapPanel extends JPanel implements GLEventListener {
 	
 	public void drawTiles(GL2 gl, boolean fg) {
 		gl.glColor3f(1, 1, 1);
+		IntBuffer oldVP = IntBuffer.allocate(4);
+		gl.glGetIntegerv(GL2.GL_VIEWPORT, oldVP);
+		gl.glMatrixMode(GL2.GL_PROJECTION);
+		gl.glPushMatrix();
 		if(firstDraw || redrawEverything) {
 			for(Level level : Main.loadedMap.levels) {
 				if(level != selectedLevel) {
-					IntBuffer oldViewport = IntBuffer.allocate(4);
-					gl.glGetIntegerv(GL.GL_VIEWPORT, oldViewport);
-					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
+					
+					gl.glLoadIdentity();
 					gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
-					//imgG.translate(-level.bounds.x, -level.bounds.y);
+					glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
+					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
 					drawTiles(gl, level, fg);
 					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
-					gl.glViewport(oldViewport.get(), oldViewport.get(), oldViewport.get(), oldViewport.get());
 				}
 			}
 		}
+		gl.glViewport(oldVP.get(), oldVP.get(), oldVP.get(), oldVP.get());
+		gl.glPopMatrix();
 		// TODO Draw the selected level every frame
 	}
 	
@@ -392,7 +387,208 @@ public class MapPanel extends JPanel implements GLEventListener {
 		texRender.createGraphics().drawImage(tiles.img, 0, 0, null);
 		Drawing.drawTexture(gl, texRender.getTexture(), 0, 0,
         		0, 0, level.bounds.width, level.bounds.height, 1);
-		//g.drawImage(tiles.img, level.bounds.x, level.bounds.y, null);
+	}
+	
+	public void drawDecals(GL2 gl, boolean fg) {
+		gl.glColor3f(1, 1, 1);
+		IntBuffer oldVP = IntBuffer.allocate(4);
+		gl.glGetIntegerv(GL2.GL_VIEWPORT, oldVP);
+		gl.glMatrixMode(GL2.GL_PROJECTION);
+		gl.glPushMatrix();
+		if(firstDraw || redrawEverything) {
+			for(Level level : Main.loadedMap.levels) {
+				if(level != selectedLevel) {
+					
+					gl.glLoadIdentity();
+					gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
+					glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
+					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
+					drawDecals(gl, level, fg);
+					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
+				}
+			}
+		}
+		gl.glViewport(oldVP.get(), oldVP.get(), oldVP.get(), oldVP.get());
+		gl.glPopMatrix();
+	}
+	
+	public void drawDecals(GL2 gl, Level level, boolean fg) {
+		ListLevelLayer decals = (fg ? level.fgDecals : level.bgDecals);
+		if(decals != null) {
+			for(int i = 0; i < decals.items.size(); i++) {
+				Decal d = (Decal)decals.items.get(i);
+				TextureArea texArea = d.getTextureArea();
+				
+				// Convert from coordinates for the center of the image (with padding), to coordinates for the bottom left of the image (without padding) 
+				Point p = new Point(d.x + texArea.offsetX * d.scaleX - texArea.width / 2 * d.scaleX, level.bounds.height - (d.y + texArea.offsetY * d.scaleY + texArea.area.height * d.scaleY - texArea.height / 2 * d.scaleY));
+				Drawing.drawTexture(gl, texArea.texture, p.x, p.y,
+		        		texArea.area.x, texArea.area.y, texArea.area.width, texArea.area.height, d.scaleX, d.scaleY);
+			}
+		}
+	}
+	
+	public void drawEntities(GL2 gl) {
+		gl.glColor3f(1, 1, 1);
+		IntBuffer oldVP = IntBuffer.allocate(4);
+		gl.glGetIntegerv(GL2.GL_VIEWPORT, oldVP);
+		gl.glMatrixMode(GL2.GL_PROJECTION);
+		gl.glPushMatrix();
+		if(firstDraw || redrawEverything) {
+			for(Level level : Main.loadedMap.levels) {
+				if(level != selectedLevel) {
+					gl.glLoadIdentity();
+					gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
+					glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
+					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
+					drawEntities(gl, level);
+					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
+				}
+			}
+		}
+		gl.glViewport(oldVP.get(), oldVP.get(), oldVP.get(), oldVP.get());
+		gl.glPopMatrix();
+	}
+	
+	public void drawEntities(GL2 gl, Level level) {
+		for(int i = 0; i < level.entities.items.size(); i++) {
+			Entity e = (Entity)level.entities.items.get(i);
+			EntityConfig ec = Main.entityConfig.get(e.name);
+			if(ec == null) {
+				ec = new EntityConfig();
+				ec.name = e.name;
+				ec.setImage(defaultEntityImg);
+				Main.entityConfig.put(e.name, ec);
+			}
+			
+			drawEntity(gl, level, e, ec);
+			
+			if(selectedEntity == e && e.nodes.size() != 0) {
+				gl.glColor4f(1, 1, 1, 0.6f);
+				for(Point n : e.nodes) {
+					drawEntity(gl, level, n.x, n.y, e, ec, 0.6f);
+				}
+				gl.glColor4f(1, 1, 1, 0);
+			}
+		}
+	}
+	
+	private void drawEntity(GL2 gl, Level level, Entity e, EntityConfig ec) {
+		drawEntity(gl, level, e.x, e.y, e, ec, 0.6f);
+	}
+	
+	private void drawEntity(GL2 gl, Level level, int x, int y, Entity e, EntityConfig ec, float alpha) {
+		if(ec.visualType == VisualType.Image) {
+			TextureArea texArea = ec.getTextureArea();
+			Point p = new Point(e.x - ec.imgOffsetX + texArea.offsetX, level.bounds.height - (e.y - ec.imgOffsetY + texArea.offsetY + texArea.area.height));
+			Drawing.drawTexture(gl, texArea.texture, p.x, p.y,
+	        		texArea.area.x, texArea.area.y, texArea.area.width, texArea.area.height, 1);
+		} else if(ec.visualType == VisualType.Box) {
+			Rectangle eBounds = new Rectangle(e.x, level.bounds.height - e.y, (int)e.getProperty("width").value, (int)e.getProperty("height").value);
+			gl.glColor4f(ec.fillColor.getRed()/255f, ec.fillColor.getGreen()/255f, ec.fillColor.getBlue()/255f, alpha);
+			
+			gl.glBegin(GL2.GL_QUADS);
+			gl.glVertex2f(eBounds.x, eBounds.y);
+			gl.glVertex2f(eBounds.x + eBounds.width, eBounds.y);
+			gl.glVertex2f(eBounds.x + eBounds.width, eBounds.y - eBounds.height);
+			gl.glVertex2f(eBounds.x, eBounds.y - eBounds.height);
+			gl.glEnd();
+			
+			gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_LINE);
+			gl.glColor4f(ec.borderColor.getRed()/255f, ec.borderColor.getGreen()/255f, ec.borderColor.getBlue()/255f, alpha);
+			gl.glBegin(GL2.GL_QUADS);
+			gl.glVertex2f(eBounds.x, eBounds.y);
+			gl.glVertex2f(eBounds.x + eBounds.width, eBounds.y);
+			gl.glVertex2f(eBounds.x + eBounds.width, eBounds.y - eBounds.height);
+			gl.glVertex2f(eBounds.x, eBounds.y - eBounds.height);
+			gl.glEnd();
+			gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_FILL);
+			gl.glColor4f(1, 1, 1, alpha);
+		} else if(ec.visualType == VisualType.ImageBox) {
+			int width = (int)e.getPropertyValue("width", 8);
+			int height = (int)e.getPropertyValue("height", 8);
+			
+			TextureArea texArea = ec.getTextureArea();
+			int repX = Math.round(width / (float) texArea.width);
+			int repY = Math.round(height / (float) texArea.height);
+			
+			Point p = new Point(e.x - ec.imgOffsetX + texArea.offsetX, level.bounds.height - (e.y - ec.imgOffsetY + texArea.offsetY + texArea.area.height));
+			for(int j = 0; j < repY; j++) {
+				for(int k = 0; k < repX; k++) {
+					Drawing.drawTexture(gl, texArea.texture, p.x + k * texArea.width, p.y - j * texArea.height,
+			        		texArea.area.x, texArea.area.y, texArea.area.width, texArea.area.height, 1);
+				}
+			}
+		}
+	}
+	
+	public void drawTriggers(GL2 gl) {
+		gl.glColor3f(1, 1, 1);
+		IntBuffer oldVP = IntBuffer.allocate(4);
+		gl.glGetIntegerv(GL2.GL_VIEWPORT, oldVP);
+		gl.glMatrixMode(GL2.GL_PROJECTION);
+		gl.glPushMatrix();
+		if(firstDraw || redrawEverything) {
+			for(Level level : Main.loadedMap.levels) {
+				if(level != selectedLevel) {
+					gl.glLoadIdentity();
+					gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
+					glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
+					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
+					drawTriggers(gl, level);
+					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
+				}
+			}
+		}
+		gl.glViewport(oldVP.get(), oldVP.get(), oldVP.get(), oldVP.get());
+		gl.glPopMatrix();
+	}
+	
+	public void drawTriggers(GL2 gl, Level level) {
+		for(int i = 0; i < level.triggers.items.size(); i++) {
+			Entity e = (Entity)level.triggers.items.get(i);
+			
+			drawTrigger(gl, level, e);
+			
+			if(selectedEntity == e && e.nodes.size() != 0) {
+				for(Point n : e.nodes) {
+					drawTrigger(gl, level, n.x, n.y, e, 0.6f);
+				}
+			}
+		}
+	}
+	
+	private void drawTrigger(GL2 gl, Level level, Entity e) {
+		drawTrigger(gl, level, e.x, e.y, e, 1);
+	}
+	
+	private void drawTrigger(GL2 gl, Level level, int x, int y, Entity e, float alpha) {
+		Rectangle triggerBounds = new Rectangle(x, level.bounds.height - y, (int)e.getProperty("width").value, (int)e.getProperty("height").value);
+		gl.glColor4f(200/255f, 0, 0, 100/255f * alpha);
+		
+		gl.glBegin(GL2.GL_QUADS);
+		gl.glVertex2f(triggerBounds.x, triggerBounds.y);
+		gl.glVertex2f(triggerBounds.x + triggerBounds.width, triggerBounds.y);
+		gl.glVertex2f(triggerBounds.x + triggerBounds.width, triggerBounds.y - triggerBounds.height);
+		gl.glVertex2f(triggerBounds.x, triggerBounds.y - triggerBounds.height);
+		gl.glEnd();
+		
+		textRenderer.beginRendering(glcanvas.getWidth(), glcanvas.getHeight());
+		textRenderer.setColor(0, 0, 0, alpha);
+		Rectangle2D textBounds = textRenderer.getBounds(e.name);
+		textRenderer.draw(e.name, (int)(triggerBounds.x + triggerBounds.width / 2 - textBounds.getWidth() / 2), (int)(triggerBounds.y + triggerBounds.height / 2 - textBounds.getHeight() / 2));
+		textRenderer.endRendering();
+		//TextRenderer.drawString(g2d, e.name, font, g2d.getColor(), triggerBounds, TextAlignment.MIDDLE);
+		
+		gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_LINE);
+		gl.glColor4f(.25f, .25f, .25f, alpha); // Color.darkGray
+		gl.glBegin(GL2.GL_QUADS);
+		gl.glVertex2f(triggerBounds.x, triggerBounds.y);
+		gl.glVertex2f(triggerBounds.x + triggerBounds.width, triggerBounds.y);
+		gl.glVertex2f(triggerBounds.x + triggerBounds.width, triggerBounds.y - triggerBounds.height);
+		gl.glVertex2f(triggerBounds.x, triggerBounds.y - triggerBounds.height);
+		gl.glEnd();
+		gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_FILL);
+		gl.glColor4f(1, 1, 1, 1);
 	}
 	
 	public void drawRooms(GL2 gl) {
@@ -481,6 +677,18 @@ public class MapPanel extends JPanel implements GLEventListener {
 	@Override
 	public void init(GLAutoDrawable drawable) {
 		final GL2 gl = drawable.getGL().getGL2();
+		Font font = new Font("Dialog", Font.PLAIN, 9);
+		System.out.println(font);
+		textRenderer = new TextRenderer(font);
+		defaultEntityTex = Util.getTexture(defaultEntityImgPath);
+		AtlasUnpacker.loadAtlases();
+		
+		try {
+			Main.setupAutotilers();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		Main.editingPanel.tiles.init();
 		
 		if(Main.loadedMap != null) {
 			for(Level level : Main.loadedMap.levels) {
@@ -504,10 +712,7 @@ public class MapPanel extends JPanel implements GLEventListener {
 		if(height <= 0)
 			height = 1;
 		
-		double dpiScalingFactor = ((Graphics2D)getGraphics()).getTransform().getScaleX();
-		width = (int) (width * dpiScalingFactor);
-		height = (int) (height * dpiScalingFactor);
-		gl.glViewport(0, 0, width, height);
+		glViewportDPIAware(gl, 0, 0, width, height);
 ////		final float h = (float) width / (float) height;
 //		gl.glMatrixMode(GL2.GL_PROJECTION);
 //		gl.glLoadIdentity();
@@ -515,6 +720,13 @@ public class MapPanel extends JPanel implements GLEventListener {
 ////		glu.gluPerspective(45.0f, h, 1.0, 20.0);
 //		gl.glMatrixMode(GL2.GL_MODELVIEW);
 //		gl.glLoadIdentity();
+	}
+	
+	private void glViewportDPIAware(GL2 gl, int x, int y, int width, int height) {
+		double dpiScalingFactor = ((Graphics2D)getGraphics()).getTransform().getScaleX();
+		width = (int) (width * dpiScalingFactor);
+		height = (int) (height * dpiScalingFactor);
+		gl.glViewport(x, y, width, height);
 	}
 	
 	@Override

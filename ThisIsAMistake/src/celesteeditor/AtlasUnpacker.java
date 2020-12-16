@@ -1,6 +1,7 @@
 package celesteeditor;
 
 import java.awt.Color;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.DataInputStream;
 import java.io.File;
@@ -13,16 +14,20 @@ import java.util.HashMap;
 
 import javax.imageio.ImageIO;
 
+import com.jogamp.opengl.util.awt.TextureRenderer;
+
 import celesteeditor.util.StringEncoding;
+import celesteeditor.util.TextureArea;
 import github.MichaelBeeu.util.EndianDataInputStream;
 
 public class AtlasUnpacker {
 	
 	public static HashMap<String, BufferedImage> gameplay = new HashMap<>();
+	public static HashMap<String, TextureArea> gameplayTex = new HashMap<>();
 	
 	public static void loadAtlases() {
 		try {
-			loadAtlas(gameplay, new File(Main.globalConfig.celesteDir + "\\Content\\Graphics\\Atlases\\Gameplay.meta"));
+			loadAtlas(gameplay, gameplayTex, new File(Main.globalConfig.celesteDir + "\\Content\\Graphics\\Atlases\\Gameplay.meta"));
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -30,7 +35,7 @@ public class AtlasUnpacker {
 		}
 	}
 	
-	public static void loadAtlas(HashMap<String, BufferedImage> atlas, File meta) throws FileNotFoundException, IOException {
+	public static void loadAtlas(HashMap<String, BufferedImage> atlas, HashMap<String, TextureArea> atlas2, File meta) throws FileNotFoundException, IOException {
 		try(EndianDataInputStream dis = new EndianDataInputStream(new FileInputStream(meta))) {
 			dis.order(ByteOrder.LITTLE_ENDIAN);
 			dis.readInt();
@@ -40,6 +45,8 @@ public class AtlasUnpacker {
 			for(int i = 0; i < numFiles; i++) {
 				BufferedImage img = loadImage(new DataInputStream(new FileInputStream(new File(meta.getAbsoluteFile().getParent() + "\\" + StringEncoding.readString(dis) + ".data"))));
 				ImageIO.write(img, "png", new File("output_img.png"));
+				TextureRenderer texRend = new TextureRenderer(img.getWidth(), img.getHeight(), true);
+				texRend.createGraphics().drawImage(img, 0, 0, null);
 				
 				short numImgs = dis.readShort();
 				for (int j = 0; j < numImgs; j++) {
@@ -55,6 +62,7 @@ public class AtlasUnpacker {
 					BufferedImage subImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 					subImage.createGraphics().drawImage(img.getSubimage(x, y, rWidth, rHeight), -offsetX, -offsetY, null);
 					atlas.put(path + ".png", subImage);
+					atlas2.put(path + ".png", new TextureArea(texRend.getTexture(), new Rectangle(x, img.getHeight() - y - rHeight, rWidth, rHeight), (int)width, (int)height, -offsetX, -offsetY));
 				}
 			}
 		

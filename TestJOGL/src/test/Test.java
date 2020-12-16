@@ -156,10 +156,8 @@ public class Test implements GLEventListener {
 				try {
 					tex = TextureIO.newTexture(new File("../ThisIsAMistake/bin/assets/add.png"), false);
 				} catch (GLException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 		        Drawing.drawTexture(gl, tex, 0 + 10, 20,
@@ -184,7 +182,6 @@ public class Test implements GLEventListener {
 
 	@Override
 	public void dispose(GLAutoDrawable drawable) {
-		// TODO Auto-generated method stub
 		
 		
 	}
@@ -213,7 +210,6 @@ public class Test implements GLEventListener {
 	@Override
 	public void reshape(GLAutoDrawable drawable, int x, int y, int width,
 			int height) {
-		// TODO Auto-generated method stub
 		final GL2 gl = drawable.getGL().getGL2();
 		 
 		if(height <=0)
@@ -233,7 +229,6 @@ public class Test implements GLEventListener {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 		// setUp open GL version 2
 		final GLProfile profile = GLProfile.get(GLProfile.GL2);
 		GLCapabilities capabilities = new GLCapabilities(profile);
@@ -304,13 +299,11 @@ public class Test implements GLEventListener {
 
 			@Override
 			public void actionPerformed(ActionEvent drawable) {
-				// TODO Auto-generated method stub
 				fullScreen(frame);
 			}});
 	}
 
 	protected static void fullScreen(JFrame f) {
-		// TODO Auto-generated method stub
 		if(!isFullScreen){
 			f.dispose();
 			f.setUndecorated(true);

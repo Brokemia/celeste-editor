@@ -101,8 +101,8 @@ public class Main {
 	    	globalConfig.celesteDir = chooser.getCurrentDirectory().toString();
 	    	saveGlobalConfig();
 		}
-		AtlasUnpacker.loadAtlases();
-		setupAutotilers();
+		//AtlasUnpacker.loadAtlases();
+		//setupAutotilers();
 		reloadECImages();
 		Decal.loadDecalsFromAtlas();
 		openMap();

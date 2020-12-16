@@ -97,7 +97,7 @@ public class DecalPropertyPopup extends JFrame {
 			invalid.add("scaleY");
 		}
 		
-		decal.setTexture(textureField.getText());
+		decal.setImagePath(textureField.getText());
 		
 		if(invalid.size() != 0) {
 			String msg = "Invalid value" + (invalid.size() == 1 ? "" : "s") + " provided for: ";

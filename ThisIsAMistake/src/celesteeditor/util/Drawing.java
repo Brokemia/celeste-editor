@@ -12,6 +12,13 @@ public class Drawing {
             final int texturex, final int texturey,
             final int width, final int height,
             final float scaleFactor) throws GLException {
+		drawTexture(gl, tex, x, y, texturex, texturey, width, height, scaleFactor, scaleFactor);
+	}
+	
+	public static void drawTexture(GL2 gl, Texture tex, final float x, final float y,
+            final int texturex, final int texturey,
+            final int width, final int height,
+            final float scaleX, final float scaleY) throws GLException {
 		tex.enable(gl);
 		tex.bind(gl);
 		tex.setTexParameteri(gl, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST);
@@ -21,13 +28,14 @@ public class Drawing {
 		                                           texturey + height);
 		gl.glBegin(GL2GL3.GL_QUADS);
 		gl.glTexCoord2f(coords.left(), coords.bottom());
-		gl.glVertex3f(x, y, 0);
+		gl.glVertex2f(x, y);
 		gl.glTexCoord2f(coords.right(), coords.bottom());
-		gl.glVertex3f(x + width * scaleFactor, y, 0);
+		gl.glVertex2f(x + width * scaleX, y);
 		gl.glTexCoord2f(coords.right(), coords.top());
-		gl.glVertex3f(x + width * scaleFactor, y + height * scaleFactor, 0);
+		gl.glVertex2f(x + width * scaleX, y + height * scaleY);
 		gl.glTexCoord2f(coords.left(), coords.top());
-		gl.glVertex3f(x, y + height * scaleFactor, 0);
+		gl.glVertex2f(x, y + height * scaleY);
 		gl.glEnd();
+		gl.glBindTexture(tex.getTarget(), 0);
 	}
 }
