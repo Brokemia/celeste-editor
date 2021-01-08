@@ -1,6 +1,8 @@
 package celesteeditor.ui;
 
+import java.awt.Component;
 import java.awt.Cursor;
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
@@ -8,7 +10,6 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
-import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
 import celesteeditor.Main;
@@ -22,6 +23,7 @@ import celesteeditor.editing.PlacementConfig.PlacementType;
 import celesteeditor.editing.TileTool.MouseAction;
 import celesteeditor.ui.EditingPanel.EditPanel;
 import celesteeditor.ui.MapPanel.LevelEdge;
+import celesteeditor.util.TextureArea;
 
 public class MapMouseListener implements MouseListener, MouseMotionListener, MouseWheelListener {
 	
@@ -34,12 +36,17 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 	public MapMouseListener(MapPanel p) {
 		panel = p;
 	}
+	
+	public Point mouseCoordsToOpenGL(Point p, Component c) {
+		return new Point((int)Math.round(p.x / ((Graphics2D)c.getGraphics()).getTransform().getScaleX()), (int)Math.round((p.y - c.getHeight()) / ((Graphics2D)c.getGraphics()).getTransform().getScaleX()));
+	}
 
 	@Override
 	public void mouseDragged(MouseEvent e) {
+		Point pt = mouseCoordsToOpenGL(e.getPoint(), e.getComponent());
 		if(button1Down && (Main.editingPanel.getCurrentPanel() == EditPanel.Entities || Main.editingPanel.getCurrentPanel() == EditPanel.Selection) && panel.draggingEntity && (panel.selectedEntity != null || panel.selectedDecal != null)) {
-			int newX = (int)(e.getPoint().x / panel.getActualZoom(panel.getZoom()) - dragStart.x);
-			int newY = (int)(e.getPoint().y / panel.getActualZoom(panel.getZoom()) - dragStart.y);
+			int newX = (int)(pt.x / panel.getActualZoom(panel.getZoom()) - dragStart.x);
+			int newY = (int)(pt.y / panel.getActualZoom(panel.getZoom()) - dragStart.y);
 			
 			// Snap to grid if ctrl not pressed
 			if(!panel.ctrlPressed) {
@@ -60,9 +67,9 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 			}
 		} else {
 			panel.draggingEntity = false;
-			if(button1Down && Main.editingPanel.getCurrentPanel() == EditPanel.Selection) {
+			if(button1Down && Main.editingPanel.getCurrentPanel() == EditPanel.Selection && panel.selectedLevel != null) {
 				Rectangle lBounds = new Rectangle((int)((panel.selectedLevel.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((panel.selectedLevel.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(panel.selectedLevel.bounds.width * panel.getActualZoom()), (int)(panel.selectedLevel.bounds.height * panel.getActualZoom()));
-				Point tileCoords = new Point((int)((e.getPoint().x -  lBounds.x) / panel.getActualZoom() / 8), (int)((e.getPoint().y - lBounds.y) / panel.getActualZoom() / 8));
+				Point tileCoords = new Point((int)((pt.x -  lBounds.x) / panel.getActualZoom() / 8), (int)((pt.y - lBounds.y) / panel.getActualZoom() / 8));
 				
 				switch(panel.selectedEdge) {
 				case Left:
@@ -97,38 +104,39 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 		
 		if(button3Down || (button1Down && panel.altPressed && !panel.draggingEntity)) {
 			if(dragStart != null)
-				panel.offset = new Point((int)(e.getPoint().x * panel.getActualZoom(-panel.getZoom()) - dragStart.x), (int)(e.getPoint().y * panel.getActualZoom(-panel.getZoom()) - dragStart.y));
+				panel.offset = new Point((int)(pt.x * panel.getActualZoom(-panel.getZoom()) - dragStart.x), (int)(pt.y * panel.getActualZoom(-panel.getZoom()) - dragStart.y));
 		} else if(Main.editingPanel.getCurrentPanel() == EditPanel.Tiles && Main.loadedMap != null) {
-			placeTile(e.getPoint(), MouseAction.DRAGGED);
+			placeTile(pt, MouseAction.DRAGGED);
 		}
 	}
 
 	@Override
 	public void mouseMoved(MouseEvent e) {
 		boolean mouseSet = false;
+		Point pt = mouseCoordsToOpenGL(e.getPoint(), e.getComponent());
 		if(Main.loadedMap != null) {
 			for(Level level : Main.loadedMap.levels) {
 				Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
-				if(lBounds.contains(e.getPoint()) && Main.editingPanel.tiles.selectedTileTool != null) {
+				if(lBounds.contains(pt) && Main.editingPanel.tiles.selectedTileTool != null) {
 					if(level == panel.selectedLevel) {
-						Main.editingPanel.tiles.selectedTileTool.lastMousePos = new Point((int)((e.getPoint().x -  lBounds.x) / panel.getActualZoom() / 8), (int)((e.getPoint().y - lBounds.y) / panel.getActualZoom() / 8));
+						Main.editingPanel.tiles.selectedTileTool.lastMousePos = new Point((int)((pt.x -  lBounds.x) / panel.getActualZoom() / 8), (int)((pt.y - lBounds.y) / panel.getActualZoom() / 8));
 					} else {
 						Main.editingPanel.tiles.selectedTileTool.lastMousePos = null;
 					}
 				}
 				if(Main.editingPanel.getCurrentPanel() == EditPanel.Selection && !mouseSet) {
-					if(new Rectangle(lBounds.x - 4, lBounds.y, 8, lBounds.height).contains(e.getPoint()) || new Rectangle(lBounds.x + lBounds.width - 4, lBounds.y, 8, lBounds.height).contains(e.getPoint())) {
-						Main.mapPanel.setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
+					if(new Rectangle(lBounds.x - 4, lBounds.y, 8, lBounds.height).contains(pt) || new Rectangle(lBounds.x + lBounds.width - 4, lBounds.y, 8, lBounds.height).contains(pt)) {
+						Main.mapPanel.panel.setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
 						mouseSet = true;
-					} else if(new Rectangle(lBounds.x, lBounds.y - 4, lBounds.width, 8).contains(e.getPoint()) || new Rectangle(lBounds.x, lBounds.y + lBounds.height - 4, lBounds.width, 8).contains(e.getPoint())) {
-						Main.mapPanel.setCursor(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR));
+					} else if(new Rectangle(lBounds.x, lBounds.y - 4, lBounds.width, 8).contains(pt) || new Rectangle(lBounds.x, lBounds.y + lBounds.height - 4, lBounds.width, 8).contains(pt)) {
+						Main.mapPanel.panel.setCursor(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR));
 						mouseSet = true;
 					}
 				}
 			}
 			
 			if(!mouseSet) {
-				Main.mapPanel.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+				Main.mapPanel.panel.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 			}
 			
 		}
@@ -136,16 +144,17 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 
 	@Override
 	public void mouseClicked(MouseEvent e) {
+		Point pt = mouseCoordsToOpenGL(e.getPoint(), e.getComponent());
 		if(Main.editingPanel.getCurrentPanel() == EditPanel.Entities && Main.editingPanel.placements.isPlacementSelected() && e.getButton() == MouseEvent.BUTTON1) {
 			if(Main.loadedMap != null) {
 				for(Level level : Main.loadedMap.levels) {
 					Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
-					if(lBounds.contains(e.getPoint())) {
+					if(lBounds.contains(pt)) {
 						panel.selectedEntity = null;
 						panel.selectedDecal = null;
 						panel.selectedNode = -1;
 						
-						Point coords = new Point((int)((e.getPoint().x -  lBounds.x) / panel.getActualZoom()), (int)((e.getPoint().y - lBounds.y) / panel.getActualZoom()));
+						Point coords = new Point((int)((pt.x -  lBounds.x) / panel.getActualZoom()), (int)((pt.y - lBounds.y) / panel.getActualZoom()));
 						// Snap to grid if not holding ctrl
 						if(!Main.mapPanel.ctrlPressed) {
 							coords.x /= 8;
@@ -194,7 +203,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 				for(int i = 0; i < panel.selectedEntity.nodes.size(); i++) {
 					Rectangle eBounds = panel.selectedEntity.getBounds(panel.selectedLevel, i, panel.offset, panel.getActualZoom());
 					
-					if(eBounds.contains(e.getPoint())) {
+					if(eBounds.contains(pt)) {
 						switch(e.getButton()) {
 						case MouseEvent.BUTTON1:
 							panel.selectedNode = i;
@@ -217,7 +226,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 			if(Main.loadedMap != null) {
 				for(Level level : Main.loadedMap.levels) {
 					Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
-					if(lBounds.contains(e.getPoint()) && panel.selectedLevel != level) {
+					if(lBounds.contains(pt) && panel.selectedLevel != level) {
 						panel.selectedLevel = level;
 						panel.selectedEntity = null;
 						panel.selectedDecal = null;
@@ -228,7 +237,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 					for(int i = 0; i < level.entities.items.size(); i++) {
 						Entity entity = (Entity)level.entities.items.get(i);
 						Rectangle eBounds = entity.getBounds(level, -1, panel.offset, panel.getActualZoom());
-						if(eBounds.contains(e.getPoint())) {
+						if(eBounds.contains(pt)) {
 							switch(e.getButton()) {
 							case MouseEvent.BUTTON1:
 								panel.selectedLevel = level;
@@ -256,10 +265,10 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 						if(decals != null) {
 							for(int i = 0; i < decals.items.size(); i++) {
 								Decal decal = (Decal)decals.items.get(i);
-								BufferedImage img = decal.getImage();
-								Rectangle dBounds = new Rectangle((int)((level.bounds.x + decal.x - img.getWidth() / 2 * Math.abs(decal.scaleX) + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + decal.y - img.getHeight() / 2 * Math.abs(decal.scaleY) + panel.offset.y) * panel.getActualZoom()), (int)(img.getWidth() * Math.abs(decal.scaleX) * panel.getActualZoom()), (int)(img.getHeight() * Math.abs(decal.scaleY) * panel.getActualZoom()));
+								TextureArea texArea = decal.getTextureArea();
+								Rectangle dBounds = new Rectangle((int)((level.bounds.x + decal.x - texArea.width / 2 * Math.abs(decal.scaleX) + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + decal.y - texArea.height / 2 * Math.abs(decal.scaleY) + panel.offset.y) * panel.getActualZoom()), (int)(texArea.width * Math.abs(decal.scaleX) * panel.getActualZoom()), (int)(texArea.height * Math.abs(decal.scaleY) * panel.getActualZoom()));
 								
-								if(dBounds.contains(e.getPoint())) {
+								if(dBounds.contains(pt)) {
 									switch(e.getButton()) {
 									case MouseEvent.BUTTON1:
 										panel.selectedLevel = level;
@@ -289,7 +298,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 					for(int i = 0; i < level.triggers.items.size(); i++) {
 						Entity trigger = (Entity)level.triggers.items.get(i);
 						Rectangle tBounds = trigger.getBounds(level, -1, panel.offset, panel.getActualZoom());
-						if(tBounds.contains(e.getPoint())) {
+						if(tBounds.contains(pt)) {
 							switch(e.getButton()) {
 							case MouseEvent.BUTTON1:
 								panel.selectedLevel = level;
@@ -318,7 +327,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 		} else if(Main.loadedMap != null) {
 			for(Level level : Main.loadedMap.levels) {
 				Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
-				if(lBounds.contains(e.getPoint()) && panel.selectedLevel != level) {
+				if(lBounds.contains(pt) && panel.selectedLevel != level) {
 					panel.selectedLevel = level;
 					panel.selectedEntity = null;
 					panel.selectedDecal = null;
@@ -341,6 +350,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 
 	@Override
 	public void mousePressed(MouseEvent e) {
+		Point pt = mouseCoordsToOpenGL(e.getPoint(), e.getComponent());
 		switch(e.getButton()) {
 		case MouseEvent.BUTTON1:
 			button1Down = true;
@@ -364,19 +374,19 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 					}
 					
 					Rectangle eBounds = panel.selectedEntity.getBounds(panel.selectedLevel, panel.selectedNode, panel.offset, panel.getActualZoom());
-					if(eBounds.contains(e.getPoint())) {
+					if(eBounds.contains(pt)) {
 						panel.draggingEntity = true;
-						dragStart = e.getPoint();
+						dragStart = pt;
 						dragStart.setLocation(dragStart.x / panel.getActualZoom(panel.getZoom()), dragStart.y / panel.getActualZoom(panel.getZoom()));
 						dragStart.translate(-x, -y);
 					}
 				} else if(panel.selectedDecal != null) {
-					BufferedImage img = panel.selectedDecal.getImage();
-					Rectangle dBounds = new Rectangle((int)((panel.selectedLevel.bounds.x + panel.selectedDecal.x - img.getWidth() / 2 * Math.abs(panel.selectedDecal.scaleX) + panel.offset.x) * panel.getActualZoom()), (int)((panel.selectedLevel.bounds.y + panel.selectedDecal.y - img.getHeight() / 2 * Math.abs(panel.selectedDecal.scaleY) + panel.offset.y) * panel.getActualZoom()), (int)(img.getWidth() * Math.abs(panel.selectedDecal.scaleX) * panel.getActualZoom()), (int)(img.getHeight() * Math.abs(panel.selectedDecal.scaleY) * panel.getActualZoom()));
+					TextureArea texArea = panel.selectedDecal.getTextureArea();
+					Rectangle dBounds = new Rectangle((int)((panel.selectedLevel.bounds.x + panel.selectedDecal.x - texArea.width / 2 * Math.abs(panel.selectedDecal.scaleX) + panel.offset.x) * panel.getActualZoom()), (int)((panel.selectedLevel.bounds.y + panel.selectedDecal.y - texArea.height / 2 * Math.abs(panel.selectedDecal.scaleY) + panel.offset.y) * panel.getActualZoom()), (int)(texArea.width * Math.abs(panel.selectedDecal.scaleX) * panel.getActualZoom()), (int)(texArea.height * Math.abs(panel.selectedDecal.scaleY) * panel.getActualZoom()));
 						
-					if(dBounds.contains(e.getPoint())) {
+					if(dBounds.contains(pt)) {
 						panel.draggingEntity = true;
-						dragStart = e.getPoint();
+						dragStart = pt;
 						dragStart.setLocation(dragStart.x / panel.getActualZoom(panel.getZoom()), dragStart.y / panel.getActualZoom(panel.getZoom()));
 						dragStart.translate(-panel.selectedDecal.x, -panel.selectedDecal.y);
 					}
@@ -386,13 +396,13 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 					if(Main.loadedMap != null) {
 						for(Level level : Main.loadedMap.levels) {
 							Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
-							if(new Rectangle(lBounds.x - 4, lBounds.y, 8, lBounds.height).contains(e.getPoint())) {
+							if(new Rectangle(lBounds.x - 4, lBounds.y, 8, lBounds.height).contains(pt)) {
 								Main.mapPanel.selectedEdge = LevelEdge.Left;
-							} else if(new Rectangle(lBounds.x + lBounds.width - 4, lBounds.y, 8, lBounds.height).contains(e.getPoint())) {
+							} else if(new Rectangle(lBounds.x + lBounds.width - 4, lBounds.y, 8, lBounds.height).contains(pt)) {
 								Main.mapPanel.selectedEdge = LevelEdge.Right;
-							} else if(new Rectangle(lBounds.x, lBounds.y - 4, lBounds.width, 8).contains(e.getPoint())) {
+							} else if(new Rectangle(lBounds.x, lBounds.y - 4, lBounds.width, 8).contains(pt)) {
 								Main.mapPanel.selectedEdge = LevelEdge.Top;
-							} else if(new Rectangle(lBounds.x, lBounds.y + lBounds.height - 4, lBounds.width, 8).contains(e.getPoint())) {
+							} else if(new Rectangle(lBounds.x, lBounds.y + lBounds.height - 4, lBounds.width, 8).contains(pt)) {
 								Main.mapPanel.selectedEdge = LevelEdge.Bottom;
 							} else {
 								Main.mapPanel.selectedEdge = LevelEdge.None;
@@ -408,12 +418,12 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 					}
 				}
 			} else if(Main.editingPanel.getCurrentPanel() == EditPanel.Tiles && Main.loadedMap != null) {
-				placeTile(e.getPoint(), MouseAction.PRESSED);
+				placeTile(pt, MouseAction.PRESSED);
 			}
 		}
 		
 		if(button3Down || (button1Down && panel.altPressed)) {
-			dragStart = e.getPoint();
+			dragStart = pt;
 			dragStart.setLocation(dragStart.x * panel.getActualZoom(-panel.getZoom()), dragStart.y * panel.getActualZoom(-panel.getZoom()));
 			dragStart.translate(-panel.offset.x, -panel.offset.y);
 		}
@@ -421,6 +431,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 
 	@Override
 	public void mouseReleased(MouseEvent e) {
+		Point pt = mouseCoordsToOpenGL(e.getPoint(), e.getComponent());
 		switch(e.getButton()) {
 		case MouseEvent.BUTTON1:
 			button1Down = false;
@@ -434,7 +445,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 		}
 		
 		if(Main.editingPanel.getCurrentPanel() == EditPanel.Tiles && Main.loadedMap != null) {
-			placeTile(e.getPoint(), MouseAction.RELEASED);
+			placeTile(pt, MouseAction.RELEASED);
 		} else if(Main.mapPanel.selectedEdgeOffset != 0) {
 			switch(Main.mapPanel.selectedEdge) {
 			case Right:
@@ -579,6 +590,9 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 			case None:
 				break;
 			}
+			panel.selectedLevel.roomTexture = null;
+			panel.selectedLevel.solids.setSize(panel.selectedLevel.bounds.width / 8, panel.selectedLevel.bounds.height / 8);
+			panel.selectedLevel.bg.setSize(panel.selectedLevel.bounds.width / 8, panel.selectedLevel.bounds.height / 8);
 			Main.mapPanel.selectedEdgeOffset = 0;
 			Main.mapPanel.selectedEdge = LevelEdge.None;
 		}

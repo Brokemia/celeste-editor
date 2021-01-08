@@ -2,7 +2,6 @@ package celesteeditor.editing;
 
 import java.awt.Color;
 import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
@@ -10,7 +9,6 @@ import java.util.Scanner;
 import celesteeditor.AtlasUnpacker;
 import celesteeditor.ui.MapPanel;
 import celesteeditor.util.TextureArea;
-import celesteeditor.util.Util;
 
 public class EntityConfig {
 	
@@ -22,42 +20,20 @@ public class EntityConfig {
 	
 	public VisualType visualType = VisualType.Image;
 	
-	private String imagePath;
-	
-	private BufferedImage image;
-	
+	private String texturePath;
+		
 	private TextureArea textureArea;
 	
 	public int imgOffsetX = 4, imgOffsetY = 8;
 	
 	public Color borderColor = Color.black, fillColor = Color.white;
 		
-	public String getImagePath() {
-		return imagePath;
+	public String getTexturePath() {
+		return texturePath;
 	}
 	
-	public BufferedImage getImage() {
-		return image;
-	}
-	
-	public void setImage(BufferedImage img) {
-		image = img;
-		textureArea = null;
-	}
-	
-	public void setImage(String imgPath) {
-		image = null;
-		if(imgPath.startsWith("Gameplay:")) {
-			image = AtlasUnpacker.gameplay.get(imgPath.replace('\\', '/').substring("Gameplay:".length()));
-		}
-		
-		if(image == null) {
-			image = Util.getImage(imgPath);
-		}
-		imagePath = imgPath;
-		if(image == null) {
-			image = MapPanel.defaultEntityImg;
-		}
+	public void setTexture(String texPath) {
+		texturePath = texPath;
 		textureArea = null;
 	}
 	
@@ -65,8 +41,8 @@ public class EntityConfig {
 		if(textureArea != null) {
 			return textureArea;
 		}
-		if(imagePath != null && imagePath.startsWith("Gameplay:")) {
-			textureArea = AtlasUnpacker.gameplayTex.get(imagePath.replace('\\', '/').substring("Gameplay:".length()));
+		if(texturePath != null && texturePath.startsWith("Gameplay:")) {
+			textureArea = AtlasUnpacker.gameplayTex.get(texturePath.replace('\\', '/').substring("Gameplay:".length()));
 		} else {
 			textureArea = new TextureArea(MapPanel.defaultEntityTex, new Rectangle(0, 0, MapPanel.defaultEntityTex.getWidth(), MapPanel.defaultEntityTex.getHeight()));
 		}
@@ -78,8 +54,8 @@ public class EntityConfig {
 		String res = "ENTITY CONFIG";
 		res += "\nname=" + name;
 		res += "\nvisualType=" + visualType;
-		if(imagePath != null && !imagePath.isBlank())
-			res += "\nimagePath=" + imagePath;
+		if(texturePath != null && !texturePath.isBlank())
+			res += "\nimagePath=" + texturePath;
 		res += "\nimageOffsetX=" + imgOffsetX;
 		res += "\nimageOffsetY=" + imgOffsetY;
 		if(borderColor != null)
@@ -119,7 +95,7 @@ public class EntityConfig {
 						res.visualType = VisualType.valueOf(parts[1]);
 						break;
 					case "imagePath":
-						res.setImage(parts[1]);
+						res.setTexture(parts[1]);
 						break;
 					case "imageOffsetX":
 						res.imgOffsetX = Integer.parseInt(parts[1]);
@@ -136,9 +112,6 @@ public class EntityConfig {
 					}
 				}
 			}
-		}
-		if(res.image == null) {
-			res.setImage("");
 		}
 		
 		return res;

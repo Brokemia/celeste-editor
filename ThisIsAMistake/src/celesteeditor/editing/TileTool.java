@@ -49,7 +49,6 @@ public abstract class TileTool {
 			}
 		}
 		tileMap[p.y][p.x] = tileType.ID;
-		tileLayer.img = null;
 	}
 	
 }

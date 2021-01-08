@@ -26,5 +26,10 @@ public class TextureArea {
 		this.offsetX = offsetX;
 		this.offsetY = offsetY;
 	}
+
+	public TextureArea getSubtexture(int x, int y, int width, int height) {
+		Rectangle newRect = new Rectangle(area.x + x - offsetX, area.y + y - (this.height -  offsetY - area.height), width, height);
+		return new TextureArea(texture, newRect, width, height, 0, 0);
+	}
 	
 }

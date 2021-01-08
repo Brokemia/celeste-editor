@@ -1,7 +1,6 @@
 package celesteeditor.data;
 
 import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -9,7 +8,6 @@ import celesteeditor.AtlasUnpacker;
 import celesteeditor.BinaryPacker.Element;
 import celesteeditor.ui.MapPanel;
 import celesteeditor.util.TextureArea;
-import celesteeditor.util.Util;
 
 public class Decal implements ElementEncoded {
 	public static ArrayList<String> decals = new ArrayList<>();
@@ -27,9 +25,7 @@ public class Decal implements ElementEncoded {
 	public int scaleX = 1, scaleY = 1;
 	
 	private String texture;
-	
-	private BufferedImage image;
-	
+		
 	private TextureArea textureArea;
 	
 	public Decal(String tex) {
@@ -43,19 +39,8 @@ public class Decal implements ElementEncoded {
 	}
 	
 	public void setImagePath(String path) {
-		image = AtlasUnpacker.gameplay.get("decals/" + path.replace('\\', '/'));
-		if(image == null) {
-			image = Util.getImage("/" + path.replace('\\', '/'));
-		}
 		texture = path;
-		if(image == null) {
-			image = MapPanel.defaultEntityImg;
-		}
 		textureArea = null;
-	}
-	
-	public BufferedImage getImage() {
-		return image;
 	}
 	
 	public TextureArea getTextureArea() {

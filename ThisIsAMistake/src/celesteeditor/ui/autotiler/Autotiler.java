@@ -1,7 +1,6 @@
 package celesteeditor.ui.autotiler;
 
 import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,6 +18,7 @@ import org.xml.sax.SAXException;
 
 import celesteeditor.AtlasUnpacker;
 import celesteeditor.data.TileLevelLayer;
+import celesteeditor.util.TextureArea;
 
 public class Autotiler {
 
@@ -29,7 +29,7 @@ public class Autotiler {
 	}
 
 	public static class Tiles {
-		public ArrayList<BufferedImage> Textures = new ArrayList<BufferedImage>();
+		public ArrayList<TextureArea> Textures = new ArrayList<TextureArea>();
 
 		public ArrayList<String> OverlapSprites = new ArrayList<String>();
 
@@ -37,9 +37,9 @@ public class Autotiler {
 	}
 
 	public class Generated {
-		public BufferedImage[][] tileImg;
+		public TextureArea[][] tileImg;
 
-		public BufferedImage[][] SpriteOverlay;
+		public TextureArea[][] SpriteOverlay;
 	}
 
 	public static class Behaviour {
@@ -78,8 +78,7 @@ public class Autotiler {
 			NamedNodeMap itemAttr = item.getAttributes();
 			char c = itemAttr.getNamedItem("id").getNodeValue().charAt(0);
 			Tileset tileset = new Tileset(
-					AtlasUnpacker.gameplay.get("tilesets/" + itemAttr.getNamedItem("path").getNodeValue() + ".png"), 8,
-					8);
+					AtlasUnpacker.gameplayTex.get("tilesets/" + itemAttr.getNamedItem("path").getNodeValue() + ".png"), 8, 8);
 			TerrainType terrainType = new TerrainType(itemAttr.getNamedItem("path").getNodeValue(), c);
 			readInto(terrainType, tileset, item);
 			if (itemAttr.getNamedItem("copy") != null) {
@@ -175,7 +174,7 @@ public class Autotiler {
 					String[] columns = rows[j].split(",");
 					int x = Integer.parseInt(columns[0]);
 					int y = Integer.parseInt(columns[1]);
-					BufferedImage img = tileset.getTile(x, y);
+					TextureArea img = tileset.getTile(x, y);
 					tiles.Textures.add(img);
 				}
 
@@ -234,8 +233,8 @@ public class Autotiler {
 
 	private Generated generate(TileLevelLayer mapData, int startX, int startY, int tilesX, int tilesY,
 			boolean forceSolid, char forceID, Behaviour behaviour) {
-		BufferedImage[][] tileImg = new BufferedImage[tilesY][tilesX];
-		BufferedImage[][] animatedTiles = new BufferedImage[tilesY][tilesX];
+		TextureArea[][] tileImg = new TextureArea[tilesY][tilesX];
+		TextureArea[][] animatedTiles = new TextureArea[tilesY][tilesX];
 		Rectangle forceFill = new Rectangle();
 		if (forceSolid) {
 			forceFill = new Rectangle(startX, startY, tilesX, tilesY);

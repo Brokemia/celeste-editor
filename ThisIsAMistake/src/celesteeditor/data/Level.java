@@ -67,6 +67,8 @@ public class Level implements ElementEncoded {
 	
 	public Texture roomTexture;
 	
+	public boolean needsRedraw;
+	
 	public void adjustCanvasSize() {
 		Rectangle bounds = new Rectangle(this.bounds);
 		
@@ -164,7 +166,7 @@ public class Level implements ElementEncoded {
 				fgDecals = new ListLevelLayer(Decal.class).fromElement(c);
 				break;
 			case "solids":
-				solids = new TileLevelLayer(bounds.width, bounds.height).fromElement(c);
+				solids = new TileLevelLayer(bounds.width / 8, bounds.height / 8).fromElement(c);
 				break;
 			case "entities":
 				entities = new ListLevelLayer(Entity.class).fromElement(c);
@@ -176,7 +178,7 @@ public class Level implements ElementEncoded {
 				bgDecals = new ListLevelLayer(Decal.class).fromElement(c);
 				break;
 			case "bg":
-				bg = new TileLevelLayer(bounds.width, bounds.height).fromElement(c);
+				bg = new TileLevelLayer(bounds.width / 8, bounds.height / 8).fromElement(c);
 				break;
 			case "objtiles":
 				objTiles = new IntTileLevelLayer().fromElement(c);

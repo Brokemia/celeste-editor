@@ -57,6 +57,14 @@ public class Entity implements ElementEncoded {
 		return getBounds(level, node, new Point(0, 0), 1);
 	}
 	
+	/**
+	 * Gets the bounds of this entity
+	 * @param level The level the entity is in, if level is null, get the bounds relative to the level
+	 * @param node
+	 * @param offset
+	 * @param zoom
+	 * @return
+	 */
 	public Rectangle getBounds(Level level, int node, Point offset, double zoom) {
 		EntityConfig ec = Main.entityConfig.get(name);
 		int xPos = x;
@@ -67,11 +75,14 @@ public class Entity implements ElementEncoded {
 				yPos = nodes.get(node).y;
 			}
 		}
+		
+		Rectangle lBounds = level == null ? new Rectangle(0, 0, 0, 0) : level.bounds;
+		
 		// If there is no EntityConfig, it must be a trigger
 		if(ec == null || ec.visualType != VisualType.Image) {
-			return new Rectangle((int)((xPos + level.bounds.x + offset.x - (ec != null && ec.visualType == VisualType.ImageBox ? ec.imgOffsetX : 0)) * zoom), (int)((yPos + level.bounds.y + offset.y - (ec != null && ec.visualType == VisualType.ImageBox ? ec.imgOffsetY : 0)) * zoom), (int)(getPropertyValue("width", 8) * zoom), (int)(getPropertyValue("height", 8) * zoom));
+			return new Rectangle((int)((xPos + lBounds.x + offset.x - (ec != null && ec.visualType == VisualType.ImageBox ? ec.imgOffsetX : 0)) * zoom), (int)((yPos + lBounds.y + offset.y - (ec != null && ec.visualType == VisualType.ImageBox ? ec.imgOffsetY : 0)) * zoom), (int)(getPropertyValue("width", 8) * zoom), (int)(getPropertyValue("height", 8) * zoom));
 		} else {
-			return new Rectangle((int)((xPos + level.bounds.x - ec.imgOffsetX + offset.x) * zoom), (int)((yPos + level.bounds.y - ec.imgOffsetY + offset.y) * zoom), (int)((int)ec.getImage().getWidth() * zoom), (int)((int)ec.getImage().getHeight() * zoom));
+			return new Rectangle((int)((xPos + lBounds.x - ec.imgOffsetX + offset.x) * zoom), (int)((yPos + lBounds.y - ec.imgOffsetY + offset.y) * zoom), (int)((int)ec.getTextureArea().width * zoom), (int)((int)ec.getTextureArea().height * zoom));
 		}
 	}
 	

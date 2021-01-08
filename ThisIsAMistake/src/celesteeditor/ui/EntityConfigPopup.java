@@ -64,7 +64,7 @@ public class EntityConfigPopup extends JFrame {
 		JPanel pathPanel = new JPanel();
 		pathPanel.setLayout(new GridLayout(1, 2));
 		pathPanel.add(new JLabel("Image Path"));
-		pathPanel.add(imgPathField = new JTextField(ec.getImagePath()));
+		pathPanel.add(imgPathField = new JTextField(ec.getTexturePath()));
 		imgPanel.add(pathPanel);
 		final JPanel offsetXPanel = new JPanel();
 		offsetXPanel.setLayout(new GridLayout(1, 2));
@@ -128,7 +128,7 @@ public class EntityConfigPopup extends JFrame {
 	
 	public void actionPerformed(ActionEvent e) {
 		entityConfig.visualType = (VisualType)visualTypeBox.getSelectedItem();
-		entityConfig.setImage(imgPathField.getText());
+		entityConfig.setTexture(imgPathField.getText());
 		entityConfig.imgOffsetX = Integer.parseInt(imgOffsetXField.getText());
 		entityConfig.imgOffsetY = Integer.parseInt(imgOffsetYField.getText());
 		entityConfig.borderColor = Color.decode("0x" + borderColorField.getText());

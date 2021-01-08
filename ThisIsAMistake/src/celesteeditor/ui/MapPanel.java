@@ -1,29 +1,23 @@
 package celesteeditor.ui;
 
-import java.awt.AlphaComposite;
-import java.awt.BasicStroke;
 import java.awt.Color;
-import java.awt.Composite;
 import java.awt.Font;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.Stroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
-import java.awt.geom.Rectangle2D;
-import java.awt.image.BufferedImage;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
-import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 
 import com.jogamp.opengl.GL;
@@ -33,14 +27,14 @@ import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLCapabilities;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.GLProfile;
-import com.jogamp.opengl.awt.GLCanvas;
+import com.jogamp.opengl.awt.GLJPanel;
 import com.jogamp.opengl.fixedfunc.GLLightingFunc;
 import com.jogamp.opengl.fixedfunc.GLMatrixFunc;
 import com.jogamp.opengl.glu.GLU;
-import com.jogamp.opengl.util.awt.TextRenderer;
 import com.jogamp.opengl.util.awt.TextureRenderer;
 import com.jogamp.opengl.util.texture.Texture;
 import com.text.TextAlignment;
+import com.text.TextRenderer;
 
 import celesteeditor.AtlasUnpacker;
 import celesteeditor.Main;
@@ -57,7 +51,7 @@ import celesteeditor.util.Drawing;
 import celesteeditor.util.TextureArea;
 import celesteeditor.util.Util;
 
-public class MapPanel extends JPanel implements GLEventListener {
+public class MapPanel implements GLEventListener {
 	
 	public enum LevelEdge {
 		None, Left, Right, Top, Bottom
@@ -87,9 +81,7 @@ public class MapPanel extends JPanel implements GLEventListener {
 	public LevelEdge selectedEdge = LevelEdge.None;
 	
 	public int selectedEdgeOffset;
-	
-	public boolean renderingComplete;
-	
+		
 	public boolean firstDraw = true;
 	
 	public boolean redrawEverything = false;
@@ -98,9 +90,7 @@ public class MapPanel extends JPanel implements GLEventListener {
 	
 	public boolean altPressed;
 				
-	public static String defaultEntityImgPath;
-		
-	public static BufferedImage defaultEntityImg;
+	public static String defaultEntityImgPath = "/assets/defaultentity.png";
 	
 	public static Texture defaultEntityTex;
 	
@@ -109,16 +99,12 @@ public class MapPanel extends JPanel implements GLEventListener {
     
 	private final GLCapabilities capabilities;
     
-	public final GLCanvas glcanvas;
+	public final GLJPanel panel;
     
 	private final GLU glu = new GLU();
     
-    private TextRenderer textRenderer;
-	
-	static {
-		defaultEntityImgPath = "/assets/defaultentity.png";
-		defaultEntityImg = Util.getImage(defaultEntityImgPath);
-	}
+	// TODO Clear on map reload to avoid taking up too much memory
+    private HashMap<String, TextureRenderer> triggerTextCache = new HashMap<>();
 	
 	public MapPanel() {
 		// OpenGL CAPABILITIES
@@ -126,42 +112,40 @@ public class MapPanel extends JPanel implements GLEventListener {
         capabilities = new GLCapabilities(profile);
 
         // CANVAS
-        glcanvas = new GLCanvas(capabilities);
-        glcanvas.addGLEventListener(this);
-        glcanvas.setSize(400, 400);
+        panel = new GLJPanel(capabilities);
+        panel.addGLEventListener(this);
 
-        add(glcanvas);
 		
 		MapMouseListener mouseListener = new MapMouseListener(this);
-		addMouseListener(mouseListener);
-		addMouseMotionListener(mouseListener);
-		addMouseWheelListener(mouseListener);
+		panel.addMouseListener(mouseListener);
+		panel.addMouseMotionListener(mouseListener);
+		panel.addMouseWheelListener(mouseListener);
 		
-		setBackground(new Color(61, 51, 51));
+		panel.setBackground(new Color(61, 51, 51));
 		
-		getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_CONTROL, KeyEvent.CTRL_DOWN_MASK), "ctrlPressed");
-		getActionMap().put("ctrlPressed", new AbstractAction() {
+		panel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_CONTROL, KeyEvent.CTRL_DOWN_MASK), "ctrlPressed");
+		panel.getActionMap().put("ctrlPressed", new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				ctrlPressed = true;
 			}});
-		getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_CONTROL, 0, true), "ctrlReleased");
-		getActionMap().put("ctrlReleased", new AbstractAction() {
+		panel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_CONTROL, 0, true), "ctrlReleased");
+		panel.getActionMap().put("ctrlReleased", new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				ctrlPressed = false;
 			}});
-		getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ALT, KeyEvent.ALT_DOWN_MASK), "altPressed");
-		getActionMap().put("altPressed", new AbstractAction() {
+		panel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ALT, KeyEvent.ALT_DOWN_MASK), "altPressed");
+		panel.getActionMap().put("altPressed", new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				altPressed = true;
 			}});
-		getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ALT, 0, true), "altReleased");
-		getActionMap().put("altReleased", new AbstractAction() {
+		panel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ALT, 0, true), "altReleased");
+		panel.getActionMap().put("altReleased", new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				altPressed = false;
 			}});
 		
-		getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK, false), "save");
-		getActionMap().put("save", new AbstractAction() {
+		panel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK, false), "save");
+		panel.getActionMap().put("save", new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				try {
 					Main.saveMap();
@@ -172,8 +156,8 @@ public class MapPanel extends JPanel implements GLEventListener {
 				}
 			}});
 		
-		getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK, false), "open");
-		getActionMap().put("open", new AbstractAction() {
+		panel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK, false), "open");
+		panel.getActionMap().put("open", new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				try {
 					Main.openMap();
@@ -184,8 +168,8 @@ public class MapPanel extends JPanel implements GLEventListener {
 				}
 			}});
 		
-		getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "delete");
-		getActionMap().put("delete", new AbstractAction() {
+		panel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "delete");
+		panel.getActionMap().put("delete", new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				if(selectedEntity != null) {
 					if(selectedNode < 0) {
@@ -232,6 +216,9 @@ public class MapPanel extends JPanel implements GLEventListener {
 	}
 	
 	private void createLevelFrameBuffer(GL2 gl, Level level) {
+		if(level.frameBuffer == null) {
+			level.frameBuffer = IntBuffer.allocate(1);
+		}
 		gl.glGenFramebuffers(1, level.frameBuffer);
 		gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
 		IntBuffer texID = IntBuffer.allocate(1);
@@ -251,11 +238,9 @@ public class MapPanel extends JPanel implements GLEventListener {
 	
 	@Override
     public void display(GLAutoDrawable drawable) {
-		final Rectangle orthoView = new Rectangle(0, 0, 800, 800);
+		final Rectangle orthoView = new Rectangle(0, 0, panel.getSize().width, panel.getSize().height);
         final GL2 gl = drawable.getGL().getGL2();
-        
-        //renderingComplete = false;
-        
+                
         gl.glClear(GL2.GL_COLOR_BUFFER_BIT | GL2.GL_DEPTH_BUFFER_BIT);
         final int attribBits = GL2.GL_ENABLE_BIT | GL2.GL_TEXTURE_BIT | GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT | GL2.GL_TRANSFORM_BIT;
 	    gl.glPushAttrib(attribBits);
@@ -267,6 +252,9 @@ public class MapPanel extends JPanel implements GLEventListener {
 	    gl.glPushMatrix();
 	    gl.glLoadIdentity();
 	    glu.gluOrtho2D(orthoView.x, orthoView.x + orthoView.width, orthoView.y, orthoView.y + orthoView.height);
+	    
+	    gl.glScaled(actualZoom, actualZoom, 1);
+	    
 	    gl.glMatrixMode(GLMatrixFunc.GL_MODELVIEW);
 	    gl.glPushMatrix();
 	    gl.glLoadIdentity();
@@ -284,21 +272,47 @@ public class MapPanel extends JPanel implements GLEventListener {
 					// Setup the framebuffer and texture for the room if necessary
 					createLevelFrameBuffer(gl, level);
 				}
-		        Drawing.drawTexture(gl, level.roomTexture, offset.x + level.bounds.x, -offset.y - level.bounds.y - level.bounds.height,
-		        		0, 0, level.roomTexture.getWidth(), level.roomTexture.getHeight(), (float)actualZoom);
+				if(level != selectedLevel) {
+					if(level.needsRedraw) {
+						gl.glColor3f(1, 1, 1);
+						// Save old viewing settings
+						IntBuffer oldVP = IntBuffer.allocate(4);
+						gl.glGetIntegerv(GL2.GL_VIEWPORT, oldVP);
+						gl.glMatrixMode(GL2.GL_PROJECTION);
+						FloatBuffer oldMat = FloatBuffer.allocate(16);
+						gl.glGetFloatv(GL2.GL_PROJECTION_MATRIX, oldMat);
+						
+						// Setup to draw to the framebuffer
+						gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
+
+						gl.glBindTexture(GL.GL_TEXTURE_2D, level.roomTexture.getTextureObject());
+						gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA, level.bounds.width, level.bounds.height, 0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, null);
+						Drawing.unbindTexture(gl, GL.GL_TEXTURE_2D);
+						
+						gl.glLoadIdentity();
+						gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
+						glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
+						
+						// Actually draw stuff
+						drawTiles(gl, level, false);
+						drawDecals(gl, level, false);
+						drawEntities(gl, level);
+						drawTiles(gl, level, true);
+						drawDecals(gl, level, true);
+						drawTriggers(gl, level);
+						
+						// Revert everything
+						gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
+						gl.glViewport(oldVP.get(), oldVP.get(), oldVP.get(), oldVP.get());
+						gl.glLoadMatrixf(oldMat);
+						level.needsRedraw = false;
+					}
+			        Drawing.drawTexture(gl, level.roomTexture, offset.x + level.bounds.x, -offset.y - level.bounds.y - level.bounds.height,
+			        		0, 0, level.bounds.width, level.bounds.height, 1);
+				} else {
+					level.needsRedraw = true;
+				}
 			}
-			
-//			if(mapRenderThread == null) {
-//				mapRenderThread = new Thread(new MapRenderThread());
-//				mapRenderThread.start();
-//			}
-			gl.glBindTexture(GL.GL_TEXTURE_2D, 0);
-			gl.glBegin(GL2.GL_QUADS);
-			gl.glVertex2f(1, 1);
-			gl.glVertex2f(50, 1);
-			gl.glVertex2f(50, 50);
-			gl.glVertex2f(1, 50);
-			gl.glEnd();
 			drawFillers(gl);
 			drawTiles(gl, false);
 			drawDecals(gl, false);
@@ -307,15 +321,18 @@ public class MapPanel extends JPanel implements GLEventListener {
 			drawDecals(gl, true);
 			drawTriggers(gl);
 			drawRooms(gl);
-//			drawSelectionBox(g);
+			
+			FloatBuffer oldMat = FloatBuffer.allocate(16);
+			gl.glGetFloatv(GL2.GL_PROJECTION_MATRIX, oldMat);
+			if(selectedLevel != null) {
+				gl.glTranslatef(selectedLevel.bounds.x + offset.x, -selectedLevel.bounds.y - offset.y - selectedLevel.bounds.height, 0);
+				drawSelectionBox(gl);
+			}
+			gl.glLoadMatrixf(oldMat);
 			
 			firstDraw = false;
 			gl.glFlush();
 		}
-		
-		//renderingComplete = true;
-        
-        
     }
 
 	private void drawFillers(GL2 gl) {
@@ -324,23 +341,23 @@ public class MapPanel extends JPanel implements GLEventListener {
 		for(Rectangle r : Main.loadedMap.filler) {
 			Point pos = getOpenGLPosition(r, true);
 			gl.glVertex2f(pos.x, pos.y);
-			gl.glVertex2f(pos.x + r.width * 8 * (float)actualZoom, pos.y);
-			gl.glVertex2f(pos.x + r.width * 8 * (float)actualZoom, pos.y + r.height * 8 * (float)actualZoom);
-			gl.glVertex2f(pos.x, pos.y + r.height * 8 * (float)actualZoom);
+			gl.glVertex2f(pos.x + r.width * 8, pos.y);
+			gl.glVertex2f(pos.x + r.width * 8, pos.y + r.height * 8);
+			gl.glVertex2f(pos.x, pos.y + r.height * 8);
 		}
 		gl.glEnd();
-		gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_LINE);
+		gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_LINE);
 		gl.glColor3f(0, 0, 0);
 		gl.glBegin(GL2.GL_QUADS);
 		for(Rectangle r : Main.loadedMap.filler) {
 			Point pos = getOpenGLPosition(r, true);
 			gl.glVertex2f(pos.x, pos.y);
-			gl.glVertex2f(pos.x + r.width * 8 * (float)actualZoom, pos.y);
-			gl.glVertex2f(pos.x + r.width * 8 * (float)actualZoom, pos.y + r.height * 8 * (float)actualZoom);
-			gl.glVertex2f(pos.x, pos.y + r.height * 8 * (float)actualZoom);
+			gl.glVertex2f(pos.x + r.width * 8, pos.y);
+			gl.glVertex2f(pos.x + r.width * 8, pos.y + r.height * 8);
+			gl.glVertex2f(pos.x, pos.y + r.height * 8);
 		}
 		gl.glEnd();
-		gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_FILL);
+		gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_FILL);
 	}
 	
 	public void drawTiles(GL2 gl, boolean fg) {
@@ -348,23 +365,28 @@ public class MapPanel extends JPanel implements GLEventListener {
 		IntBuffer oldVP = IntBuffer.allocate(4);
 		gl.glGetIntegerv(GL2.GL_VIEWPORT, oldVP);
 		gl.glMatrixMode(GL2.GL_PROJECTION);
-		gl.glPushMatrix();
-		if(firstDraw || redrawEverything) {
-			for(Level level : Main.loadedMap.levels) {
-				if(level != selectedLevel) {
-					
-					gl.glLoadIdentity();
-					gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
-					glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
-					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
-					drawTiles(gl, level, fg);
-					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
-				}
+		// I was using glPushMatrix and glPopMatrix here, rather than glGetFloatv and glLoadMatrix,
+		// but for whatever reason the matrix changed after the two commands executed, but only if the window had been resized
+		// No idea why that happened, I suspect an issue with JOGL rather than OpenGL
+		FloatBuffer oldMat = FloatBuffer.allocate(16);
+		gl.glGetFloatv(GL2.GL_PROJECTION_MATRIX, oldMat);
+		for(Level level : Main.loadedMap.levels) {
+			if(level != selectedLevel && (firstDraw || redrawEverything)) {
+				gl.glLoadIdentity();
+				gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
+				glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
+				gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
+				drawTiles(gl, level, fg);
+				gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
 			}
 		}
 		gl.glViewport(oldVP.get(), oldVP.get(), oldVP.get(), oldVP.get());
-		gl.glPopMatrix();
-		// TODO Draw the selected level every frame
+		gl.glLoadMatrixf(oldMat);
+		if(selectedLevel != null) {
+			gl.glTranslatef(selectedLevel.bounds.x + offset.x, -selectedLevel.bounds.y - offset.y - selectedLevel.bounds.height, 0);
+			drawTiles(gl, selectedLevel, fg);
+		}
+		gl.glLoadMatrixf(oldMat);
 	}
 	
 	public void drawTiles(GL2 gl, Level level, boolean fg) {
@@ -372,21 +394,15 @@ public class MapPanel extends JPanel implements GLEventListener {
 		Main.fgAutotiler.rand = new Random(level.name.hashCode());
 		
 		TileLevelLayer tiles = fg ? level.solids : level.bg;
-		if(tiles.img == null) {
-			tiles.img = new BufferedImage(level.bounds.width, level.bounds.height, BufferedImage.TYPE_INT_ARGB);
-			Graphics imgG = tiles.img.createGraphics();
-			tiles.tileImgs = (fg ? Main.fgAutotiler : Main.bgAutotiler).generateMap(tiles, true).tileImg;
-			for(int i = 0; i < tiles.tileImgs.length; i++) {
-				for(int j = 0; j < tiles.tileImgs[i].length; j++) {
-					imgG.drawImage(tiles.tileImgs[i][j], j * 8, i * 8, null);
+		tiles.tileImgs = (fg ? Main.fgAutotiler : Main.bgAutotiler).generateMap(tiles, true).tileImg;
+		for(int i = 0; i < tiles.tileImgs.length; i++) {
+			for(int j = 0; j < tiles.tileImgs[i].length; j++) {
+				if(tiles.tileImgs[i][j] != null) {
+					Drawing.drawTexture(gl, tiles.tileImgs[i][j].texture, j * 8, level.bounds.height - i * 8 - 8,
+							tiles.tileImgs[i][j].area.x, tiles.tileImgs[i][j].area.y, tiles.tileImgs[i][j].area.width, tiles.tileImgs[i][j].area.height, 1);
 				}
 			}
 		}
-		
-		TextureRenderer texRender = new TextureRenderer(level.bounds.width, level.bounds.height, true);
-		texRender.createGraphics().drawImage(tiles.img, 0, 0, null);
-		Drawing.drawTexture(gl, texRender.getTexture(), 0, 0,
-        		0, 0, level.bounds.width, level.bounds.height, 1);
 	}
 	
 	public void drawDecals(GL2 gl, boolean fg) {
@@ -394,22 +410,28 @@ public class MapPanel extends JPanel implements GLEventListener {
 		IntBuffer oldVP = IntBuffer.allocate(4);
 		gl.glGetIntegerv(GL2.GL_VIEWPORT, oldVP);
 		gl.glMatrixMode(GL2.GL_PROJECTION);
-		gl.glPushMatrix();
-		if(firstDraw || redrawEverything) {
-			for(Level level : Main.loadedMap.levels) {
-				if(level != selectedLevel) {
-					
-					gl.glLoadIdentity();
-					gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
-					glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
-					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
-					drawDecals(gl, level, fg);
-					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
-				}
+		// I was using glPushMatrix and glPopMatrix here, rather than glGetFloatv and glLoadMatrix,
+		// but for whatever reason the matrix changed after the two commands executed, but only if the window had been resized
+		// No idea why that happened, I suspect an issue with JOGL rather than OpenGL
+		FloatBuffer oldMat = FloatBuffer.allocate(16);
+		gl.glGetFloatv(GL2.GL_PROJECTION_MATRIX, oldMat);
+		for(Level level : Main.loadedMap.levels) {
+			if(level != selectedLevel && (firstDraw || redrawEverything)) {
+				gl.glLoadIdentity();
+				gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
+				glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
+				gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
+				drawDecals(gl, level, fg);
+				gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
 			}
 		}
 		gl.glViewport(oldVP.get(), oldVP.get(), oldVP.get(), oldVP.get());
-		gl.glPopMatrix();
+		gl.glLoadMatrixf(oldMat);
+		if(selectedLevel != null) {
+			gl.glTranslatef(selectedLevel.bounds.x + offset.x, -selectedLevel.bounds.y - offset.y - selectedLevel.bounds.height, 0);
+			drawDecals(gl, selectedLevel, fg);
+		}
+		gl.glLoadMatrixf(oldMat);
 	}
 	
 	public void drawDecals(GL2 gl, Level level, boolean fg) {
@@ -432,21 +454,28 @@ public class MapPanel extends JPanel implements GLEventListener {
 		IntBuffer oldVP = IntBuffer.allocate(4);
 		gl.glGetIntegerv(GL2.GL_VIEWPORT, oldVP);
 		gl.glMatrixMode(GL2.GL_PROJECTION);
-		gl.glPushMatrix();
-		if(firstDraw || redrawEverything) {
-			for(Level level : Main.loadedMap.levels) {
-				if(level != selectedLevel) {
-					gl.glLoadIdentity();
-					gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
-					glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
-					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
-					drawEntities(gl, level);
-					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
-				}
+		// I was using glPushMatrix and glPopMatrix here, rather than glGetFloatv and glLoadMatrix,
+		// but for whatever reason the matrix changed after the two commands executed, but only if the window had been resized
+		// No idea why that happened, I suspect an issue with JOGL rather than OpenGL
+		FloatBuffer oldMat = FloatBuffer.allocate(16);
+		gl.glGetFloatv(GL2.GL_PROJECTION_MATRIX, oldMat);
+		for(Level level : Main.loadedMap.levels) {
+			if(level != selectedLevel && (firstDraw || redrawEverything)) {
+				gl.glLoadIdentity();
+				gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
+				glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
+				gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
+				drawEntities(gl, level);
+				gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
 			}
 		}
 		gl.glViewport(oldVP.get(), oldVP.get(), oldVP.get(), oldVP.get());
-		gl.glPopMatrix();
+		gl.glLoadMatrixf(oldMat);
+		if(selectedLevel != null) {
+			gl.glTranslatef(selectedLevel.bounds.x + offset.x, -selectedLevel.bounds.y - offset.y - selectedLevel.bounds.height, 0);
+			drawEntities(gl, selectedLevel);
+		}
+		gl.glLoadMatrixf(oldMat);
 	}
 	
 	public void drawEntities(GL2 gl, Level level) {
@@ -456,7 +485,7 @@ public class MapPanel extends JPanel implements GLEventListener {
 			if(ec == null) {
 				ec = new EntityConfig();
 				ec.name = e.name;
-				ec.setImage(defaultEntityImg);
+				ec.setTexture(defaultEntityImgPath);
 				Main.entityConfig.put(e.name, ec);
 			}
 			
@@ -493,7 +522,7 @@ public class MapPanel extends JPanel implements GLEventListener {
 			gl.glVertex2f(eBounds.x, eBounds.y - eBounds.height);
 			gl.glEnd();
 			
-			gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_LINE);
+			gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_LINE);
 			gl.glColor4f(ec.borderColor.getRed()/255f, ec.borderColor.getGreen()/255f, ec.borderColor.getBlue()/255f, alpha);
 			gl.glBegin(GL2.GL_QUADS);
 			gl.glVertex2f(eBounds.x, eBounds.y);
@@ -501,7 +530,7 @@ public class MapPanel extends JPanel implements GLEventListener {
 			gl.glVertex2f(eBounds.x + eBounds.width, eBounds.y - eBounds.height);
 			gl.glVertex2f(eBounds.x, eBounds.y - eBounds.height);
 			gl.glEnd();
-			gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_FILL);
+			gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_FILL);
 			gl.glColor4f(1, 1, 1, alpha);
 		} else if(ec.visualType == VisualType.ImageBox) {
 			int width = (int)e.getPropertyValue("width", 8);
@@ -526,27 +555,33 @@ public class MapPanel extends JPanel implements GLEventListener {
 		IntBuffer oldVP = IntBuffer.allocate(4);
 		gl.glGetIntegerv(GL2.GL_VIEWPORT, oldVP);
 		gl.glMatrixMode(GL2.GL_PROJECTION);
-		gl.glPushMatrix();
-		if(firstDraw || redrawEverything) {
-			for(Level level : Main.loadedMap.levels) {
-				if(level != selectedLevel) {
-					gl.glLoadIdentity();
-					gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
-					glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
-					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
-					drawTriggers(gl, level);
-					gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
-				}
+		// I was using glPushMatrix and glPopMatrix here, rather than glGetFloatv and glLoadMatrix,
+		// but for whatever reason the matrix changed after the two commands executed, but only if the window had been resized
+		// No idea why that happened, I suspect an issue with JOGL rather than OpenGL
+		FloatBuffer oldMat = FloatBuffer.allocate(16);
+		gl.glGetFloatv(GL2.GL_PROJECTION_MATRIX, oldMat);
+		for(Level level : Main.loadedMap.levels) {
+			if(level != selectedLevel && (firstDraw || redrawEverything)) {
+				gl.glLoadIdentity();
+				gl.glViewport(0, 0, level.bounds.width, level.bounds.height);
+				glu.gluOrtho2D(0, level.bounds.width, 0, level.bounds.height);
+				gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, level.frameBuffer.get(0));
+				drawTriggers(gl, level);
+				gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
 			}
 		}
 		gl.glViewport(oldVP.get(), oldVP.get(), oldVP.get(), oldVP.get());
-		gl.glPopMatrix();
+		gl.glLoadMatrixf(oldMat);
+		if(selectedLevel != null) {
+			gl.glTranslatef(selectedLevel.bounds.x + offset.x, -selectedLevel.bounds.y - offset.y - selectedLevel.bounds.height, 0);
+			drawTriggers(gl, selectedLevel);
+		}
+		gl.glLoadMatrixf(oldMat);
 	}
 	
 	public void drawTriggers(GL2 gl, Level level) {
 		for(int i = 0; i < level.triggers.items.size(); i++) {
 			Entity e = (Entity)level.triggers.items.get(i);
-			
 			drawTrigger(gl, level, e);
 			
 			if(selectedEntity == e && e.nodes.size() != 0) {
@@ -562,6 +597,7 @@ public class MapPanel extends JPanel implements GLEventListener {
 	}
 	
 	private void drawTrigger(GL2 gl, Level level, int x, int y, Entity e, float alpha) {
+		Font font = new Font("Dialog", Font.PLAIN, 9);
 		Rectangle triggerBounds = new Rectangle(x, level.bounds.height - y, (int)e.getProperty("width").value, (int)e.getProperty("height").value);
 		gl.glColor4f(200/255f, 0, 0, 100/255f * alpha);
 		
@@ -572,22 +608,36 @@ public class MapPanel extends JPanel implements GLEventListener {
 		gl.glVertex2f(triggerBounds.x, triggerBounds.y - triggerBounds.height);
 		gl.glEnd();
 		
-		textRenderer.beginRendering(glcanvas.getWidth(), glcanvas.getHeight());
-		textRenderer.setColor(0, 0, 0, alpha);
-		Rectangle2D textBounds = textRenderer.getBounds(e.name);
-		textRenderer.draw(e.name, (int)(triggerBounds.x + triggerBounds.width / 2 - textBounds.getWidth() / 2), (int)(triggerBounds.y + triggerBounds.height / 2 - textBounds.getHeight() / 2));
-		textRenderer.endRendering();
-		//TextRenderer.drawString(g2d, e.name, font, g2d.getColor(), triggerBounds, TextAlignment.MIDDLE);
+		gl.glMatrixMode(GL2.GL_PROJECTION);
+		FloatBuffer oldMat = FloatBuffer.allocate(16);
+		gl.glGetFloatv(GL2.GL_PROJECTION_MATRIX, oldMat);
 		
-		gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_LINE);
+		String cacheCode = e.name + ":" + triggerBounds.width + ":" + triggerBounds.height;
+		if(!triggerTextCache.containsKey(cacheCode)) {
+			TextureRenderer cache = new TextureRenderer(triggerBounds.width, triggerBounds.height, true);
+			Rectangle textBounds = new Rectangle(0, 0, triggerBounds.width, triggerBounds.height);
+			Graphics2D g2d = cache.createGraphics();
+			TextRenderer.drawString(g2d, e.name, font, Color.black, textBounds, TextAlignment.MIDDLE);
+			triggerTextCache.put(cacheCode, cache);
+		}
+		
+		Texture tex = triggerTextCache.get(cacheCode).getTexture();
+		gl.glColor4f(1, 1, 1, alpha);
+		Drawing.drawTexture(gl, tex, triggerBounds.x, triggerBounds.y - triggerBounds.height,
+				0, 0, tex.getWidth(), tex.getHeight(), 1);
+		
+		gl.glMatrixMode(GL2.GL_PROJECTION);
+		gl.glLoadMatrixf(oldMat);
+		
 		gl.glColor4f(.25f, .25f, .25f, alpha); // Color.darkGray
+		gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_LINE);
 		gl.glBegin(GL2.GL_QUADS);
 		gl.glVertex2f(triggerBounds.x, triggerBounds.y);
 		gl.glVertex2f(triggerBounds.x + triggerBounds.width, triggerBounds.y);
 		gl.glVertex2f(triggerBounds.x + triggerBounds.width, triggerBounds.y - triggerBounds.height);
 		gl.glVertex2f(triggerBounds.x, triggerBounds.y - triggerBounds.height);
 		gl.glEnd();
-		gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_FILL);
+		gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_FILL);
 		gl.glColor4f(1, 1, 1, 1);
 	}
 	
@@ -598,42 +648,50 @@ public class MapPanel extends JPanel implements GLEventListener {
 			if(level != selectedLevel) {
 				Point pos = getOpenGLPosition(level.bounds);
 				gl.glVertex2f(pos.x, pos.y);
-				gl.glVertex2f(pos.x + level.bounds.width * (float)actualZoom, pos.y);
-				gl.glVertex2f(pos.x + level.bounds.width * (float)actualZoom, pos.y + level.bounds.height * (float)actualZoom);
-				gl.glVertex2f(pos.x, pos.y + level.bounds.height * (float)actualZoom);
-			} else if(Main.editingPanel.tiles.selectedTileTool != null && Main.editingPanel.getCurrentPanel() == EditPanel.Tiles && Main.editingPanel.tiles.selectedTiletype != null && !Main.editingPanel.tiles.selectedTiletype.name.equalsIgnoreCase("air")) {
-				// TODO draw entity preview
-				// Draw brush preview
-				/*char[][] tileOverlay = Main.editingPanel.tiles.selectedTileTool.getTileOverlay(Main.editingPanel.tiles.selectedTiletype.ID);
-				Point tileOverlayPos = Main.editingPanel.tiles.selectedTileTool.getTileOverlayPos();
-				if(tileOverlay != null && tileOverlayPos != null) {
-					TileLevelLayer layer = new TileLevelLayer(tileOverlay.length == 0 ? 0 : tileOverlay[0].length, tileOverlay.length);
-					layer.tileMap = tileOverlay;
-					BufferedImage[][] overlayImages = (Main.editingPanel.tiles.selectedFg ? Main.fgAutotiler : Main.bgAutotiler).generateMap(layer, new Behaviour()).tileImg;
-					for(int i = 0; i < overlayImages.length; i++) {
-						for(int j = 0; j < overlayImages[i].length; j++) {
-							if(overlayImages[i][j] != null && i + tileOverlayPos.y >= 0 && j + tileOverlayPos.x >= 0 && i + tileOverlayPos.y < level.bounds.height / 8 && j + tileOverlayPos.x < level.bounds.width / 8) {
-								g.drawImage(overlayImages[i][j], level.bounds.x + (j + tileOverlayPos.x) * 8, level.bounds.y + (i + tileOverlayPos.y) * 8, 8, 8, null);
-							}
-						}
-					}
-					g.setColor(Color.black);
-				}*/
+				gl.glVertex2f(pos.x + level.bounds.width, pos.y);
+				gl.glVertex2f(pos.x + level.bounds.width, pos.y + level.bounds.height);
+				gl.glVertex2f(pos.x, pos.y + level.bounds.height);
 			}
 		}
 		gl.glEnd();
+		gl.glColor3f(1, 1, 1);
+		if(selectedLevel != null && Main.editingPanel.tiles.selectedTileTool != null && Main.editingPanel.getCurrentPanel() == EditPanel.Tiles && Main.editingPanel.tiles.selectedTiletype != null && !Main.editingPanel.tiles.selectedTiletype.name.equalsIgnoreCase("air")) {
+			// TODO draw entity preview
+			// Draw brush preview
+			char[][] tileOverlay = Main.editingPanel.tiles.selectedTileTool.getTileOverlay(Main.editingPanel.tiles.selectedTiletype.ID);
+			Point tileOverlayPos = Main.editingPanel.tiles.selectedTileTool.getTileOverlayPos();
+			if(tileOverlay != null && tileOverlayPos != null) {
+				FloatBuffer oldMat = FloatBuffer.allocate(16);
+				gl.glGetFloatv(GL2.GL_PROJECTION_MATRIX, oldMat);
+				gl.glTranslatef(selectedLevel.bounds.x + offset.x, -selectedLevel.bounds.y - offset.y - selectedLevel.bounds.height, 0);
+				
+				TileLevelLayer layer = new TileLevelLayer(tileOverlay.length == 0 ? 0 : tileOverlay[0].length, tileOverlay.length);
+				layer.tileMap = tileOverlay;
+				TextureArea[][] overlayImages = (Main.editingPanel.tiles.selectedFg ? Main.fgAutotiler : Main.bgAutotiler).generateMap(layer, new Behaviour()).tileImg;
+				for(int i = 0; i < overlayImages.length; i++) {
+					for(int j = 0; j < overlayImages[i].length; j++) {
+						if(overlayImages[i][j] != null && i + tileOverlayPos.y >= 0 && j + tileOverlayPos.x >= 0 && i + tileOverlayPos.y < selectedLevel.bounds.height / 8 && j + tileOverlayPos.x < selectedLevel.bounds.width / 8) {
+							Drawing.drawTexture(gl, overlayImages[i][j].texture, (j + tileOverlayPos.x) * 8, selectedLevel.bounds.height - (i + tileOverlayPos.y) * 8 - 8,
+									overlayImages[i][j].area.x, overlayImages[i][j].area.y, overlayImages[i][j].area.width, overlayImages[i][j].area.height, 1);
+						}
+					}
+				}
+				Drawing.unbindTexture(gl, GL2.GL_TEXTURE_2D);
+				gl.glLoadMatrixf(oldMat);
+			}
+		}
 		gl.glColor3f(0, 0, 0);
-		gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_LINE);
+		gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_LINE);
 		gl.glBegin(GL2.GL_QUADS);
 		for(Level level : Main.loadedMap.levels) {
 			Point pos = getOpenGLPosition(level.bounds);
 			gl.glVertex2f(pos.x, pos.y);
-			gl.glVertex2f(pos.x + level.bounds.width * (float)actualZoom, pos.y);
-			gl.glVertex2f(pos.x + level.bounds.width * (float)actualZoom, pos.y + level.bounds.height * (float)actualZoom);
-			gl.glVertex2f(pos.x, pos.y + level.bounds.height * (float)actualZoom);
+			gl.glVertex2f(pos.x + level.bounds.width, pos.y);
+			gl.glVertex2f(pos.x + level.bounds.width, pos.y + level.bounds.height);
+			gl.glVertex2f(pos.x, pos.y + level.bounds.height);
 		}
 		gl.glEnd();
-		gl.glPolygonMode(GL2.GL_FRONT, GL2.GL_FILL);
+		gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_FILL);
 		if(selectedLevel != null) {
 			gl.glBegin(GL2.GL_LINES);
 			Point pos = getOpenGLPosition(selectedLevel.bounds);
@@ -647,16 +705,48 @@ public class MapPanel extends JPanel implements GLEventListener {
 				gl.glVertex2f(pos.x + selectedLevel.bounds.width + selectedEdgeOffset * 8, pos.y + selectedLevel.bounds.height);
 				break;
 			case Top:
-				gl.glVertex2f(pos.x, pos.y + selectedEdgeOffset * 8);
-				gl.glVertex2f(pos.x + selectedLevel.bounds.width, pos.y + selectedEdgeOffset * 8);
+				gl.glVertex2f(pos.x, pos.y + selectedLevel.bounds.height - selectedEdgeOffset * 8);
+				gl.glVertex2f(pos.x + selectedLevel.bounds.width, pos.y + selectedLevel.bounds.height - selectedEdgeOffset * 8);
 				break;
 			case Bottom:
-				gl.glVertex2f(pos.x, pos.y + selectedLevel.bounds.height + selectedEdgeOffset * 8);
-				gl.glVertex2f(pos.x + selectedLevel.bounds.width, pos.y + selectedLevel.bounds.height + selectedEdgeOffset * 8);
+				gl.glVertex2f(pos.x, pos.y - selectedEdgeOffset * 8);
+				gl.glVertex2f(pos.x + selectedLevel.bounds.width, pos.y - selectedEdgeOffset * 8);
 				break;
 			}
 			gl.glEnd();
 		}
+	}
+	
+	public void drawSelectionBox(GL2 gl) {
+		gl.glColor3f(1, 0, 0);
+		gl.glLineWidth(4);
+		gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_LINE);
+		gl.glBegin(GL2.GL_QUADS);
+		if(selectedEntity != null) {
+			Rectangle bounds = selectedEntity.getBounds(null, selectedNode);
+			bounds.y = selectedLevel.bounds.height - bounds.y;
+			
+			gl.glVertex2f(bounds.x, bounds.y);
+			gl.glVertex2f(bounds.x + bounds.width, bounds.y);
+			gl.glVertex2f(bounds.x + bounds.width, bounds.y - bounds.height);
+			gl.glVertex2f(bounds.x, bounds.y - bounds.height);
+		} else if(selectedDecal != null) {
+			int x = selectedDecal.x;
+			int y = selectedLevel.bounds.height - selectedDecal.y;
+			int width = selectedDecal.getTextureArea().width;
+			int height = selectedDecal.getTextureArea().height;
+			
+			Rectangle bounds = new Rectangle(x - width / 2 * Math.abs(selectedDecal.scaleX), y - height / 2 * Math.abs(selectedDecal.scaleY), width, height);
+			
+			gl.glVertex2f(bounds.x, bounds.y);
+			gl.glVertex2f(bounds.x + bounds.width, bounds.y);
+			gl.glVertex2f(bounds.x + bounds.width, bounds.y + bounds.height);
+			gl.glVertex2f(bounds.x, bounds.y + bounds.height);
+		}
+		gl.glEnd();
+		gl.glColor3f(1, 1, 1);
+		gl.glLineWidth(1);
+		gl.glPolygonMode(GL2.GL_FRONT_AND_BACK, GL2.GL_FILL);
 	}
 	
 	public Point getOpenGLPosition(Rectangle rect) {
@@ -677,9 +767,6 @@ public class MapPanel extends JPanel implements GLEventListener {
 	@Override
 	public void init(GLAutoDrawable drawable) {
 		final GL2 gl = drawable.getGL().getGL2();
-		Font font = new Font("Dialog", Font.PLAIN, 9);
-		System.out.println(font);
-		textRenderer = new TextRenderer(font);
 		defaultEntityTex = Util.getTexture(defaultEntityImgPath);
 		AtlasUnpacker.loadAtlases();
 		
@@ -701,8 +788,6 @@ public class MapPanel extends JPanel implements GLEventListener {
 		gl.glClearDepth(1.0f);
 		gl.glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT, GL2.GL_NICEST);
 		gl.glEnable(GL2.GL_TEXTURE_2D);
-		
-		repaint();
 	}
 
 	@Override
@@ -711,7 +796,6 @@ public class MapPanel extends JPanel implements GLEventListener {
 		
 		if(height <= 0)
 			height = 1;
-		
 		glViewportDPIAware(gl, 0, 0, width, height);
 ////		final float h = (float) width / (float) height;
 //		gl.glMatrixMode(GL2.GL_PROJECTION);
@@ -723,325 +807,10 @@ public class MapPanel extends JPanel implements GLEventListener {
 	}
 	
 	private void glViewportDPIAware(GL2 gl, int x, int y, int width, int height) {
-		double dpiScalingFactor = ((Graphics2D)getGraphics()).getTransform().getScaleX();
+		double dpiScalingFactor = ((Graphics2D)panel.getGraphics()).getTransform().getScaleX();
 		width = (int) (width * dpiScalingFactor);
 		height = (int) (height * dpiScalingFactor);
 		gl.glViewport(x, y, width, height);
-	}
-	
-	@Override
-	public void paintComponent(Graphics g) {
-		super.paintComponent(g);
-		/*renderingComplete = false;
-		
-		((Graphics2D)g).scale(actualZoom, actualZoom);
-		g.translate(offset.x, offset.y);
-		
-		if(Main.loadedMap != null) {
-			lock.lock();
-			for(Level level : Main.loadedMap.levels) {
-				if(level.frameBuffer == null) {
-					//level.roomCanvas = new TextureRenderer(level.bounds.width, level.bounds.height, true);//new BufferedImage(level.bounds.width, level.bounds.height, BufferedImage.TYPE_INT_ARGB);
-					return;
-				}
-				g.drawImage(level.frameBuffer.getImage(), level.bounds.x, level.bounds.y, null);
-			}
-			
-			if(mapRenderThread == null) {
-				mapRenderThread = new Thread(new MapRenderThread());
-				mapRenderThread.start();
-			}
-			long start = System.currentTimeMillis();
-			drawFillers(g);
-			//System.out.println("Fillers: " + (System.currentTimeMillis() - start));
-			start = System.currentTimeMillis();
-			drawTiles(g, false);
-			//System.out.println("Bg Tiles: " + (System.currentTimeMillis() - start));
-			start = System.currentTimeMillis();
-			drawDecals(g, false);
-			//System.out.println("Bg Decals: " + (System.currentTimeMillis() - start));
-			start = System.currentTimeMillis();
-			drawEntities(g);
-			//System.out.println("Entities: " + (System.currentTimeMillis() - start));
-			start = System.currentTimeMillis();
-			drawTiles(g, true);
-			//System.out.println("Fg Tiles: " + (System.currentTimeMillis() - start));
-			start = System.currentTimeMillis();
-			drawDecals(g, true);
-			//System.out.println("Fg Decals: " + (System.currentTimeMillis() - start));
-			start = System.currentTimeMillis();
-			drawTriggers(g);
-			//System.out.println("Triggers: " + (System.currentTimeMillis() - start));
-			start = System.currentTimeMillis();
-			drawRooms(g);
-			//System.out.println("Rooms: " + (System.currentTimeMillis() - start));
-			start = System.currentTimeMillis();
-			drawSelectionBox(g);
-			//System.out.println("Selection Box: " + (System.currentTimeMillis() - start));
-			
-			firstDraw = false;
-			lock.unlock();
-		}
-		
-		renderingComplete = true;*/
-	}
-	
-	public void drawFillers(Graphics g) {
-		Color fillColor = new Color(0, 200, 0);
-		for(Rectangle r : Main.loadedMap.filler) {
-			g.setColor(fillColor);
-			g.fillRect(r.x * 8, r.y * 8, r.width * 8, r.height * 8);
-			g.setColor(Color.black);
-			g.drawRect(r.x * 8, r.y * 8, r.width * 8, r.height * 8);
-		}
-	}
-	
-	public void drawTiles(Graphics g, boolean fg) {
-		if(firstDraw || redrawEverything) {
-			for(Level level : Main.loadedMap.levels) {
-				if(level != selectedLevel) {
-					Graphics imgG = level.frameBuffer.createGraphics();
-					imgG.translate(-level.bounds.x, -level.bounds.y);
-					drawTiles(imgG, level, fg);
-				}
-			}
-		}
-	}
-	
-	public void drawTiles(Graphics g, Level level, boolean fg) {
-		Main.bgAutotiler.rand = new Random(level.name.hashCode());
-		Main.fgAutotiler.rand = new Random(level.name.hashCode());
-		
-		TileLevelLayer tiles = fg ? level.solids : level.bg;
-		//if(tiles.img == null) {
-			tiles.img = new BufferedImage(level.bounds.width, level.bounds.height, BufferedImage.TYPE_INT_ARGB);
-			Graphics imgG = tiles.img.createGraphics();
-			tiles.tileImgs = (fg ? Main.fgAutotiler : Main.bgAutotiler).generateMap(tiles, true).tileImg;
-			for(int i = 0; i < tiles.tileImgs.length; i++) {
-				for(int j = 0; j < tiles.tileImgs[i].length; j++) {
-					g.drawImage(tiles.tileImgs[i][j], level.bounds.x + j * 8, level.bounds.y + i * 8, null);
-				}
-			}
-		//}
-		
-		//g.drawImage(tiles.img, level.bounds.x, level.bounds.y, null);
-	}
-	
-	public void drawDecals(Graphics g, boolean fg) {
-		if(firstDraw || redrawEverything) {
-			for(Level level : Main.loadedMap.levels) {
-				if(level != selectedLevel) {
-					Graphics imgG = level.frameBuffer.createGraphics();
-					imgG.translate(-level.bounds.x, -level.bounds.y);
-					drawDecals(imgG, level, fg);
-				}
-			}
-		}
-	}
-	
-	public void drawDecals(Graphics g, Level level, boolean fg) {
-		ListLevelLayer decals = (fg ? level.fgDecals : level.bgDecals);
-		if(decals != null) {
-			for(int i = 0; i < decals.items.size(); i++) {
-				Decal d = (Decal)decals.items.get(i);
-				BufferedImage img = d.getImage();
-				
-				g.drawImage(img, d.x + level.bounds.x - img.getWidth() / 2 * d.scaleX, d.y + level.bounds.y - img.getHeight() / 2 * d.scaleY, img.getWidth() * d.scaleX, img.getHeight() * d.scaleY, null);
-			}
-		}
-	}
-	
-	public void drawEntities(Graphics g) {
-		AlphaComposite alpha = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6f);
-		
-		if(firstDraw || redrawEverything) {
-			for(Level level : Main.loadedMap.levels) {
-				if(level != selectedLevel) {
-					Graphics2D imgG = level.frameBuffer.createGraphics();
-					imgG.translate(-level.bounds.x, -level.bounds.y);
-					drawEntities(imgG, level, alpha);
-				}
-			}
-		}
-	}
-	
-	public void drawEntities(Graphics2D g2d, Level level, AlphaComposite alpha) {
-		for(int i = 0; i < level.entities.items.size(); i++) {
-			Entity e = (Entity)level.entities.items.get(i);
-			EntityConfig ec = Main.entityConfig.get(e.name);
-			if(ec == null) {
-				ec = new EntityConfig();
-				ec.name = e.name;
-				ec.setImage(defaultEntityImg);
-				Main.entityConfig.put(e.name, ec);
-			}
-			
-			Rectangle eBounds = null;
-			if(ec.visualType == VisualType.Image) {
-				g2d.drawImage(ec.getImage(), e.x + level.bounds.x - ec.imgOffsetX, e.y + level.bounds.y - ec.imgOffsetY, null);
-			} else if(ec.visualType == VisualType.Box) {
-				eBounds = new Rectangle(e.x + level.bounds.x, e.y + level.bounds.y, (int)e.getProperty("width").value, (int)e.getProperty("height").value);
-				g2d.setColor(ec.fillColor);
-				g2d.fillRect(eBounds.x, eBounds.y, eBounds.width, eBounds.height);
-				g2d.setColor(ec.borderColor);
-				g2d.drawRect(eBounds.x, eBounds.y, eBounds.width, eBounds.height);
-			} else if(ec.visualType == VisualType.ImageBox) {
-				int width = (int)e.getPropertyValue("width", 8);
-				int height = (int)e.getPropertyValue("height", 8);
-				BufferedImage img = ec.getImage();
-				int repX = Math.round(width / (float) img.getWidth());
-				int repY = Math.round(height / (float) img.getHeight());
-				
-				for(int j = 0; j < repY; j++) {
-					for(int k = 0; k < repX; k++) {
-						g2d.drawImage(ec.getImage(), e.x + level.bounds.x + k * img.getWidth() - ec.imgOffsetX, e.y + level.bounds.y + j * img.getHeight() - ec.imgOffsetY, null);
-					}
-				}
-			}
-			
-			if(selectedEntity == e && e.nodes.size() != 0) {
-				Composite c = g2d.getComposite();
-				g2d.setComposite(alpha);
-				for(Point n : e.nodes) {
-					if(ec.visualType == VisualType.Image) {
-						g2d.drawImage(ec.getImage(), n.x + level.bounds.x - ec.imgOffsetX, n.y + level.bounds.y - ec.imgOffsetY, null);
-					} else if(ec.visualType == VisualType.Box) {
-						g2d.setColor(ec.fillColor);
-						g2d.fillRect(n.x + level.bounds.x, n.y + level.bounds.y, eBounds.width, eBounds.height);
-						g2d.setColor(ec.borderColor);
-						g2d.drawRect(n.x + level.bounds.x, n.y + level.bounds.y, eBounds.width, eBounds.height);
-					} else if(ec.visualType == VisualType.ImageBox) {
-						int width = (int)e.getProperty("width").value;
-						int height = (int)e.getProperty("height").value;
-						BufferedImage img = ec.getImage();
-						int repX = Math.round(width / (float) img.getWidth());
-						int repY = Math.round(height / (float) img.getHeight());
-						
-						for(int j = 0; j < repY; j++) {
-							for(int k = 0; k < repX; k++) {
-								g2d.drawImage(ec.getImage(), e.x + level.bounds.x + k * img.getWidth() - ec.imgOffsetX, e.y + level.bounds.y + j * img.getHeight() - ec.imgOffsetY, null);
-							}
-						}
-					}
-				}
-				g2d.setComposite(c);
-			}
-		}
-	}
-	
-	public void drawTriggers(Graphics g) {
-		AlphaComposite alpha = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6f);
-		
-		if(firstDraw || redrawEverything) {
-			for(Level level : Main.loadedMap.levels) {
-				if(level != selectedLevel) {
-					Graphics2D imgG = level.frameBuffer.createGraphics();
-					imgG.translate(-level.bounds.x, -level.bounds.y);
-					drawTriggers(imgG, level, alpha);
-				}
-			}
-		}
-	}
-	
-	public void drawTriggers(Graphics2D g2d, Level level, AlphaComposite alpha) {
-		Font font = new Font(getFont().getName(), getFont().getStyle(), getFont().getSize() * 3 / 4);
-		for(int i = 0; i < level.triggers.items.size(); i++) {
-			Entity e = (Entity)level.triggers.items.get(i);
-			Rectangle triggerBounds = new Rectangle(e.x + level.bounds.x, e.y + level.bounds.y, e.getPropertyValue("width", 8), e.getPropertyValue("height", 8));
-			g2d.setColor(new Color(200, 0, 0, 100));
-			g2d.fillRect(triggerBounds.x, triggerBounds.y, triggerBounds.width, triggerBounds.height);
-			g2d.setColor(Color.black);
-			
-			TextRenderer.drawString(g2d, e.name, font, g2d.getColor(), triggerBounds, TextAlignment.MIDDLE);
-			g2d.setColor(Color.darkGray);
-			g2d.drawRect(triggerBounds.x, triggerBounds.y, triggerBounds.width, triggerBounds.height);
-			
-			if(selectedEntity == e && e.nodes.size() != 0) {
-				Composite c = g2d.getComposite();
-				g2d.setComposite(alpha);
-				for(Point n : e.nodes) {
-					g2d.setColor(new Color(200, 0, 0, 100));
-					g2d.fillRect(n.x + level.bounds.x, n.y + level.bounds.y, triggerBounds.width, triggerBounds.height);
-					g2d.setColor(Color.darkGray);
-					g2d.drawRect(n.x + level.bounds.x, n.y + level.bounds.y, triggerBounds.width, triggerBounds.height);
-				}
-				g2d.setComposite(c);
-			}
-		}
-	}
-	
-	public void drawRooms(Graphics g) {
-		g.setColor(Color.black);
-		Color darkColor = new Color(0, 0, 0, 120);
-		for(Level level : Main.loadedMap.levels) {
-			if(level != selectedLevel) {
-				g.setColor(darkColor);
-				g.fillRect(level.bounds.x, level.bounds.y, level.bounds.width, level.bounds.height);
-				g.setColor(Color.black);
-			} else if(Main.editingPanel.tiles.selectedTileTool != null && Main.editingPanel.getCurrentPanel() == EditPanel.Tiles && Main.editingPanel.tiles.selectedTiletype != null && !Main.editingPanel.tiles.selectedTiletype.name.equalsIgnoreCase("air")) {
-				// TODO draw entity preview
-				// Draw brush preview
-				char[][] tileOverlay = Main.editingPanel.tiles.selectedTileTool.getTileOverlay(Main.editingPanel.tiles.selectedTiletype.ID);
-				Point tileOverlayPos = Main.editingPanel.tiles.selectedTileTool.getTileOverlayPos();
-				if(tileOverlay != null && tileOverlayPos != null) {
-					TileLevelLayer layer = new TileLevelLayer(tileOverlay.length == 0 ? 0 : tileOverlay[0].length, tileOverlay.length);
-					layer.tileMap = tileOverlay;
-					BufferedImage[][] overlayImages = (Main.editingPanel.tiles.selectedFg ? Main.fgAutotiler : Main.bgAutotiler).generateMap(layer, new Behaviour()).tileImg;
-					for(int i = 0; i < overlayImages.length; i++) {
-						for(int j = 0; j < overlayImages[i].length; j++) {
-							if(overlayImages[i][j] != null && i + tileOverlayPos.y >= 0 && j + tileOverlayPos.x >= 0 && i + tileOverlayPos.y < level.bounds.height / 8 && j + tileOverlayPos.x < level.bounds.width / 8) {
-								g.drawImage(overlayImages[i][j], level.bounds.x + (j + tileOverlayPos.x) * 8, level.bounds.y + (i + tileOverlayPos.y) * 8, 8, 8, null);
-							}
-						}
-					}
-					g.setColor(Color.black);
-				}
-			}
-			g.drawRect(level.bounds.x, level.bounds.y, level.bounds.width, level.bounds.height);
-			if(selectedLevel == level) {
-				switch(selectedEdge) {
-				case Left:
-					g.drawLine(level.bounds.x + selectedEdgeOffset * 8, level.bounds.y, level.bounds.x + selectedEdgeOffset * 8, level.bounds.y + level.bounds.height);
-					break;
-				case Right:
-					g.drawLine(level.bounds.x + level.bounds.width + selectedEdgeOffset * 8, level.bounds.y, level.bounds.x + level.bounds.width + selectedEdgeOffset * 8, level.bounds.y + level.bounds.height);
-					break;
-				case Top:
-					g.drawLine(level.bounds.x, level.bounds.y + selectedEdgeOffset * 8, level.bounds.x + level.bounds.width, level.bounds.y + selectedEdgeOffset * 8);
-					break;
-				case Bottom:
-					g.drawLine(level.bounds.x, level.bounds.y + level.bounds.height + selectedEdgeOffset * 8, level.bounds.x + level.bounds.width, level.bounds.y + level.bounds.height + selectedEdgeOffset * 8);
-					break;
-				}
-			}
-		}
-	}
-	
-	public void drawSelectionBox(Graphics g) {
-		
-		if(selectedEntity != null) {
-			Graphics2D g2d = (Graphics2D) g;
-			Stroke origStroke = g2d.getStroke();
-			g2d.setStroke(new BasicStroke(2));
-			g2d.setColor(Color.red);
-			Rectangle bounds = selectedEntity.getBounds(selectedLevel, selectedNode);
-			
-			g2d.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
-			
-			g2d.setStroke(origStroke);
-		} else if(selectedDecal != null) {
-			Graphics2D g2d = (Graphics2D) g;
-			Stroke origStroke = g2d.getStroke();
-			g2d.setStroke(new BasicStroke(2));
-			g2d.setColor(Color.red);
-			int x = selectedDecal.x;
-			int y = selectedDecal.y;
-			int width = selectedDecal.getImage().getWidth();
-			int height = selectedDecal.getImage().getHeight();
-			g2d.drawRect(x + selectedLevel.bounds.x - width / 2 * Math.abs(selectedDecal.scaleX), y + selectedLevel.bounds.y - height / 2 * Math.abs(selectedDecal.scaleY), width, height);
-			
-			g2d.setStroke(origStroke);
-		}
 	}
 	
 }

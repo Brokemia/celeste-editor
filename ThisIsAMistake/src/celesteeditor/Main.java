@@ -101,12 +101,10 @@ public class Main {
 	    	globalConfig.celesteDir = chooser.getCurrentDirectory().toString();
 	    	saveGlobalConfig();
 		}
-		//AtlasUnpacker.loadAtlases();
-		//setupAutotilers();
-		reloadECImages();
+		setupMainWindow();
 		Decal.loadDecalsFromAtlas();
 		openMap();
-		setupMainWindow();
+		
 		new Thread(new UpdateThread()).start();
 	}
 	
@@ -136,13 +134,14 @@ public class Main {
 		// if the user selects a file 
         if (res == JFileChooser.APPROVE_OPTION) { 
             loadedMap = new Map().fromElement(BinaryPacker.fromBinary(j.getSelectedFile().getAbsolutePath()));
+            if(mapPanel != null) {
+            	mapPanel.firstDraw = true;
+            	mapPanel.selectedLevel = null;
+            	mapPanel.selectedDecal = null;
+            	mapPanel.selectedEntity = null;
+            	mapPanel.selectedNode = -1;
+            }
         }
-	}
-	
-	public static void reloadECImages() {
-		for(EntityConfig ec : entityConfig.values()) {
-			ec.setImage(ec.getImagePath());
-		}
 	}
 	
 	public static void saveGlobalConfig() {
@@ -211,9 +210,9 @@ public class Main {
 	public static void setupMainWindow() {
 		mainWindow = new JFrame("I don't know what to call this");
 		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-		splitPane.add(mapPanel = new MapPanel());	
-		mapPanel.setMinimumSize(new Dimension(Toolkit.getDefaultToolkit().getScreenSize().width / 3, 100));
-		mapPanel.setPreferredSize(new Dimension(2 * Toolkit.getDefaultToolkit().getScreenSize().width / 3, Toolkit.getDefaultToolkit().getScreenSize().height));
+		splitPane.add((mapPanel = new MapPanel()).panel);	
+		mapPanel.panel.setMinimumSize(new Dimension(Toolkit.getDefaultToolkit().getScreenSize().width / 3, 100));
+		mapPanel.panel.setPreferredSize(new Dimension(2 * Toolkit.getDefaultToolkit().getScreenSize().width / 3, Toolkit.getDefaultToolkit().getScreenSize().height));
 		splitPane.add(editingPanel = new EditingPanel());
 		mainWindow.add(splitPane);
 		mainWindow.setSize(Toolkit.getDefaultToolkit().getScreenSize());

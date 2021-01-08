@@ -1,35 +1,35 @@
 package celesteeditor.ui.autotiler;
 
-import java.awt.image.BufferedImage;
+import celesteeditor.util.TextureArea;
 
 public class Tileset
 {
-	private BufferedImage[][] tiles;
+	private TextureArea[][] tiles;
 
-	public BufferedImage texture;
+	public TextureArea texture;
 
 	public int tileWidth;
 
 	public int tileHeight;
 
-	public Tileset(BufferedImage texture, int tileWidth, int tileHeight)
+	public Tileset(TextureArea texture, int tileWidth, int tileHeight)
 	{
 		this.texture = texture;
 		this.tileWidth = tileWidth;
 		this.tileHeight = tileHeight;
-		tiles = new BufferedImage[texture.getWidth() / tileWidth][texture.getHeight() / tileHeight];
-		for (int i = 0; i < texture.getWidth() / tileWidth; i++) {
-			for (int j = 0; j < texture.getHeight() / tileHeight; j++) {
-				tiles[i][j] = texture.getSubimage(i * tileWidth, j * tileHeight, tileWidth, tileHeight);
+		tiles = new TextureArea[texture.width / tileWidth][texture.height / tileHeight];
+		for (int i = 0; i < texture.width / tileWidth; i++) {
+			for (int j = 0; j < texture.height / tileHeight; j++) {
+				tiles[i][j] = texture.getSubtexture(i * tileWidth, texture.height - j * tileHeight - tileHeight, tileWidth, tileHeight);
 			}
 		}
 	}
 	
-	public BufferedImage getTile(int x, int y) {
+	public TextureArea getTile(int x, int y) {
 		return tiles[x][y];
 	}
 	
-	public BufferedImage getTile(int index) {
+	public TextureArea getTile(int index) {
 		if(index < 0) {
 			return null;
 		}

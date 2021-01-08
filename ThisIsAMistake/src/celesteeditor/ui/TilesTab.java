@@ -126,6 +126,7 @@ private class ToolMouseListener extends MouseAdapter {
 				for(Component c : toolLbl.getParent().getComponents()) {
 					if(c instanceof JLabel) {
 						((JLabel) c).setOpaque(false);
+						((JLabel) c).repaint();
 					}
 				}
 				selectedTileTool = tool;
@@ -177,11 +178,13 @@ private class ToolMouseListener extends MouseAdapter {
 			for(Component c : fgTiles.getComponents()) {
 				if(c instanceof Box) {
 					((Box) c).setOpaque(false);
+					((Box) c).repaint();
 				}
 			}
 			for(Component c : bgTiles.getComponents()) {
 				if(c instanceof Box) {
 					((Box) c).setOpaque(false);
+					((Box) c).repaint();
 				}
 			}
 			selectedTiletype = tileType;

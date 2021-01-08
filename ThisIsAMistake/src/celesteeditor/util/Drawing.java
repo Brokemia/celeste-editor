@@ -8,6 +8,9 @@ import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.TextureCoords;
 
 public class Drawing {
+	
+	private static Texture boundTex;
+	
 	public static void drawTexture(GL2 gl, Texture tex, final float x, final float y,
             final int texturex, final int texturey,
             final int width, final int height,
@@ -20,7 +23,10 @@ public class Drawing {
             final int width, final int height,
             final float scaleX, final float scaleY) throws GLException {
 		tex.enable(gl);
-		tex.bind(gl);
+		if(tex != boundTex) {
+			tex.bind(gl);
+			boundTex = tex;
+		}
 		tex.setTexParameteri(gl, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST);
 		tex.setTexParameteri(gl, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST);
 		final TextureCoords coords = tex.getSubImageTexCoords(texturex, texturey,
@@ -37,5 +43,10 @@ public class Drawing {
 		gl.glVertex2f(x, y + height * scaleY);
 		gl.glEnd();
 		gl.glBindTexture(tex.getTarget(), 0);
+	}
+	
+	public static void unbindTexture(GL2 gl, int target) {
+		boundTex = null;
+		gl.glBindTexture(target, 0);
 	}
 }

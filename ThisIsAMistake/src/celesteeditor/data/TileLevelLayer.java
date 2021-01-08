@@ -1,8 +1,7 @@
 package celesteeditor.data;
 
-import java.awt.image.BufferedImage;
-
 import celesteeditor.BinaryPacker.Element;
+import celesteeditor.util.TextureArea;
 
 public class TileLevelLayer extends LevelLayer {
 	public int exportMode;
@@ -13,9 +12,7 @@ public class TileLevelLayer extends LevelLayer {
 	
 	private int width, height;
 	
-	public BufferedImage img;
-	
-	public BufferedImage[][] tileImgs;
+	public TextureArea[][] tileImgs;
 	
 	public TileLevelLayer(int width, int height) {
 		this.width = width;
@@ -28,6 +25,11 @@ public class TileLevelLayer extends LevelLayer {
 	
 	public int getHeight() {
 		return height;
+	}
+	
+	public void setSize(int w, int h) {
+		width = w;
+		height = h;
 	}
 	
 	public char getTile(int x, int y) {
