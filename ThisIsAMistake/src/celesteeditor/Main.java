@@ -44,7 +44,7 @@ public class Main {
 	public static GlobalConfig globalConfig;
 
 	public static void main(String[] args) throws FileNotFoundException, IOException {
-//		Element map = BinaryPacker.fromBinary("test_out.bin");
+//		Element map = BinaryPacker.fromBinary("C:\\Users\\rrwth\\Downloads\\Soloiini.bin");
 //		System.setOut(new PrintStream(new File("allImages.txt")));
 //		printElement(map, "");
 //		Element levels = map.Children.stream().filter((Element e) -> e.Name.equals("levels")).findFirst().get();
@@ -102,7 +102,6 @@ public class Main {
 	    	saveGlobalConfig();
 		}
 		setupMainWindow();
-		Decal.loadDecalsFromAtlas();
 		openMap();
 		
 		new Thread(new UpdateThread()).start();

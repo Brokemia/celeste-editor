@@ -159,7 +159,7 @@ public class Meta implements ElementEncoded {
 		bloomBase = element.AttrFloat("BloomBase");
 		bloomStrength = element.AttrFloat("BloomStrength");
 		jumpthru = element.Attr("Jumpthru", null);
-		coreMode = CoreModes.valueOf(element.Attr("CoreMode", null));
+		coreMode = CoreModes.valueOf(element.Attr("CoreMode", "None"));
 		cassetteNoteColor = element.Attr("CassetteNoteColor", null);
 		cassetteSong = element.Attr("CassetteSong", null);
 		postcardSoundID = element.Attr("PostcardSoundID", null);

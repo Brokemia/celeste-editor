@@ -78,7 +78,7 @@ public class Autotiler {
 			NamedNodeMap itemAttr = item.getAttributes();
 			char c = itemAttr.getNamedItem("id").getNodeValue().charAt(0);
 			Tileset tileset = new Tileset(
-					AtlasUnpacker.gameplayTex.get("tilesets/" + itemAttr.getNamedItem("path").getNodeValue() + ".png"), 8, 8);
+					AtlasUnpacker.gameplay.get("tilesets/" + itemAttr.getNamedItem("path").getNodeValue() + ".png"), 8, 8);
 			TerrainType terrainType = new TerrainType(itemAttr.getNamedItem("path").getNodeValue(), c);
 			readInto(terrainType, tileset, item);
 			if (itemAttr.getNamedItem("copy") != null) {

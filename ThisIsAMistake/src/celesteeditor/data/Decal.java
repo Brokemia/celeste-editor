@@ -14,10 +14,14 @@ public class Decal implements ElementEncoded {
 
 	public static void loadDecalsFromAtlas() {
 		for(String path : AtlasUnpacker.gameplay.keySet()) {
-			if(path.startsWith("decals/")) {
+			if(path.contains(":") && path.substring(path.indexOf(":") + 1).startsWith("decals/")) {
+				decals.add(path.substring("decals/".length()));
+			} else if(path.startsWith("decals/")) {
 				decals.add(path.substring("decals/".length()));
 			}
 		}
+		
+		decals.sort(String.CASE_INSENSITIVE_ORDER);
 	}
 	
 	public int x, y;
@@ -45,7 +49,7 @@ public class Decal implements ElementEncoded {
 	
 	public TextureArea getTextureArea() {
 		if(textureArea != null) return textureArea;
-		textureArea = AtlasUnpacker.gameplayTex.get("decals/" + texture.replace('\\', '/'));
+		textureArea = AtlasUnpacker.gameplay.get("decals/" + texture.replace('\\', '/'));
 		if(textureArea == null) {
 			textureArea = new TextureArea(MapPanel.defaultEntityTex, new Rectangle(0, 0, MapPanel.defaultEntityTex.getWidth(), MapPanel.defaultEntityTex.getHeight()));
 		}

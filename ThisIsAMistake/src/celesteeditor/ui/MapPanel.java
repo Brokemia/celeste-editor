@@ -253,7 +253,7 @@ public class MapPanel implements GLEventListener {
 	    gl.glLoadIdentity();
 	    glu.gluOrtho2D(orthoView.x, orthoView.x + orthoView.width, orthoView.y, orthoView.y + orthoView.height);
 	    
-	    gl.glScaled(actualZoom, actualZoom, 1);
+	    gl.glScaled(getActualZoom(), getActualZoom(), 1);
 	    
 	    gl.glMatrixMode(GLMatrixFunc.GL_MODELVIEW);
 	    gl.glPushMatrix();
@@ -394,7 +394,7 @@ public class MapPanel implements GLEventListener {
 		Main.fgAutotiler.rand = new Random(level.name.hashCode());
 		
 		TileLevelLayer tiles = fg ? level.solids : level.bg;
-		tiles.tileImgs = (fg ? Main.fgAutotiler : Main.bgAutotiler).generateMap(tiles, true).tileImg;
+		tiles.tileImgs = (fg ? Main.fgAutotiler : Main.bgAutotiler).generateMap(tiles, false).tileImg;
 		for(int i = 0; i < tiles.tileImgs.length; i++) {
 			for(int j = 0; j < tiles.tileImgs[i].length; j++) {
 				if(tiles.tileImgs[i][j] != null) {
@@ -769,6 +769,9 @@ public class MapPanel implements GLEventListener {
 		final GL2 gl = drawable.getGL().getGL2();
 		defaultEntityTex = Util.getTexture(defaultEntityImgPath);
 		AtlasUnpacker.loadAtlases();
+		
+		Decal.loadDecalsFromAtlas();
+		Main.editingPanel.placements.refreshLists();
 		
 		try {
 			Main.setupAutotilers();

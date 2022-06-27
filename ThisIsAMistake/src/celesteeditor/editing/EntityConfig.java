@@ -42,7 +42,7 @@ public class EntityConfig {
 			return textureArea;
 		}
 		if(texturePath != null && texturePath.startsWith("Gameplay:")) {
-			textureArea = AtlasUnpacker.gameplayTex.get(texturePath.replace('\\', '/').substring("Gameplay:".length()));
+			textureArea = AtlasUnpacker.gameplay.get(texturePath.replace('\\', '/').substring("Gameplay:".length()));
 		} else {
 			textureArea = new TextureArea(MapPanel.defaultEntityTex, new Rectangle(0, 0, MapPanel.defaultEntityTex.getWidth(), MapPanel.defaultEntityTex.getHeight()));
 		}

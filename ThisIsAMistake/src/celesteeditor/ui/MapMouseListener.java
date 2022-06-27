@@ -2,6 +2,7 @@ package celesteeditor.ui;
 
 import java.awt.Component;
 import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -115,6 +116,7 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 		boolean mouseSet = false;
 		Point pt = mouseCoordsToOpenGL(e.getPoint(), e.getComponent());
 		if(Main.loadedMap != null) {
+			// Change the mouse to a resize icon if over the edge of a level
 			for(Level level : Main.loadedMap.levels) {
 				Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
 				if(lBounds.contains(pt) && Main.editingPanel.tiles.selectedTileTool != null) {
@@ -129,6 +131,19 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 						Main.mapPanel.panel.setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
 						mouseSet = true;
 					} else if(new Rectangle(lBounds.x, lBounds.y - 4, lBounds.width, 8).contains(pt) || new Rectangle(lBounds.x, lBounds.y + lBounds.height - 4, lBounds.width, 8).contains(pt)) {
+						Main.mapPanel.panel.setCursor(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR));
+						mouseSet = true;
+					}
+				}
+			}
+			// Change the mouse to a resize icon if over the edge of a filler
+			for(Rectangle filler : Main.loadedMap.filler) {
+				Rectangle fBounds = new Rectangle((int)((filler.x * 8 + panel.offset.x) * panel.getActualZoom()), (int)((filler.y * 8 + panel.offset.y) * panel.getActualZoom()), (int)(filler.width * 8 * panel.getActualZoom()), (int)(filler.height * 8 * panel.getActualZoom()));
+				if(Main.editingPanel.getCurrentPanel() == EditPanel.Selection && !mouseSet) {
+					if(new Rectangle(fBounds.x - 4, fBounds.y, 8, fBounds.height).contains(pt) || new Rectangle(fBounds.x + fBounds.width - 4, fBounds.y, 8, fBounds.height).contains(pt)) {
+						Main.mapPanel.panel.setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
+						mouseSet = true;
+					} else if(new Rectangle(fBounds.x, fBounds.y - 4, fBounds.width, 8).contains(pt) || new Rectangle(fBounds.x, fBounds.y + fBounds.height - 4, fBounds.width, 8).contains(pt)) {
 						Main.mapPanel.panel.setCursor(Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR));
 						mouseSet = true;
 					}
@@ -397,23 +412,27 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 						for(Level level : Main.loadedMap.levels) {
 							Rectangle lBounds = new Rectangle((int)((level.bounds.x + panel.offset.x) * panel.getActualZoom()), (int)((level.bounds.y + panel.offset.y) * panel.getActualZoom()), (int)(level.bounds.width * panel.getActualZoom()), (int)(level.bounds.height * panel.getActualZoom()));
 							if(new Rectangle(lBounds.x - 4, lBounds.y, 8, lBounds.height).contains(pt)) {
-								Main.mapPanel.selectedEdge = LevelEdge.Left;
+								panel.selectedEdge = LevelEdge.Left;
 							} else if(new Rectangle(lBounds.x + lBounds.width - 4, lBounds.y, 8, lBounds.height).contains(pt)) {
-								Main.mapPanel.selectedEdge = LevelEdge.Right;
+								panel.selectedEdge = LevelEdge.Right;
 							} else if(new Rectangle(lBounds.x, lBounds.y - 4, lBounds.width, 8).contains(pt)) {
-								Main.mapPanel.selectedEdge = LevelEdge.Top;
+								panel.selectedEdge = LevelEdge.Top;
 							} else if(new Rectangle(lBounds.x, lBounds.y + lBounds.height - 4, lBounds.width, 8).contains(pt)) {
-								Main.mapPanel.selectedEdge = LevelEdge.Bottom;
+								panel.selectedEdge = LevelEdge.Bottom;
 							} else {
-								Main.mapPanel.selectedEdge = LevelEdge.None;
+								panel.selectedEdge = LevelEdge.None;
 							}
 							
-							if(Main.mapPanel.selectedEdge != LevelEdge.None) {
+							if(panel.selectedEdge != LevelEdge.None) {
 								if(panel.selectedLevel != level) {
 									panel.selectedLevel = level;
 								}
 								return;
 							}
+						}
+						
+						if(panel.selectedEdge == LevelEdge.None) {
+							// TODO Select filler edges
 						}
 					}
 				}
@@ -602,7 +621,13 @@ public class MapMouseListener implements MouseListener, MouseMotionListener, Mou
 
 	@Override
 	public void mouseWheelMoved(MouseWheelEvent e) {
+		double oldActualZoom = panel.getActualZoom();
 		panel.setZoom(panel.getZoom() + e.getUnitsToScroll());
+		Dimension panelDims = panel.panel.getSize();
+		System.out.println(panel.getActualZoom() + " " + oldActualZoom + " " + (panelDims.height / panel.getActualZoom() - panelDims.height / oldActualZoom) + " " + panel.panel.getSize() + " " + ((oldActualZoom - panel.getActualZoom()) * panel.panel.getSize().height / 16));
+		
+		panel.offset.y -= (panelDims.height / panel.getActualZoom() - panelDims.height / oldActualZoom) / 4;
+		panel.offset.x += (panelDims.width / panel.getActualZoom() - panelDims.width / oldActualZoom) / 4;
 	}
 	
 	public void placeTile(Point screenPos, MouseAction action) {

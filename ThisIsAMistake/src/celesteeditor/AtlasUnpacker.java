@@ -22,12 +22,11 @@ import github.MichaelBeeu.util.EndianDataInputStream;
 
 public class AtlasUnpacker {
 	
-	public static HashMap<String, BufferedImage> gameplay = new HashMap<>();
-	public static HashMap<String, TextureArea> gameplayTex = new HashMap<>();
+	public static HashMap<String, TextureArea> gameplay = new HashMap<>();
 	
 	public static void loadAtlases() {
 		try {
-			loadAtlas(gameplay, gameplayTex, new File(Main.globalConfig.celesteDir + "\\Content\\Graphics\\Atlases\\Gameplay.meta"));
+			loadAtlas(gameplay, new File(Main.globalConfig.celesteDir + "\\Content\\Graphics\\Atlases\\Gameplay.meta"));
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -35,7 +34,7 @@ public class AtlasUnpacker {
 		}
 	}
 	
-	public static void loadAtlas(HashMap<String, BufferedImage> atlas, HashMap<String, TextureArea> atlas2, File meta) throws FileNotFoundException, IOException {
+	public static void loadAtlas(HashMap<String, TextureArea> atlas, File meta) throws FileNotFoundException, IOException {
 		try(EndianDataInputStream dis = new EndianDataInputStream(new FileInputStream(meta))) {
 			dis.order(ByteOrder.LITTLE_ENDIAN);
 			dis.readInt();
@@ -61,8 +60,7 @@ public class AtlasUnpacker {
 					short height = dis.readShort();
 					BufferedImage subImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 					subImage.createGraphics().drawImage(img.getSubimage(x, y, rWidth, rHeight), -offsetX, -offsetY, null);
-					atlas.put(path + ".png", subImage);
-					atlas2.put(path + ".png", new TextureArea(texRend.getTexture(), new Rectangle(x, img.getHeight() - y - rHeight, rWidth, rHeight), (int)width, (int)height, -offsetX, -offsetY));
+					atlas.put(path + ".png", new TextureArea(texRend.getTexture(), new Rectangle(x, img.getHeight() - y - rHeight, rWidth, rHeight), (int)width, (int)height, -offsetX, -offsetY));
 				}
 			}
 		
@@ -151,7 +149,7 @@ public class AtlasUnpacker {
 	    ByteBuffer buffer = ByteBuffer.allocate(bytes.length);
 	    buffer.order(ByteOrder.LITTLE_ENDIAN);
 	    buffer.put(bytes);
-	    buffer.flip();//need flip 
+	    buffer.flip(); 
 	    return buffer.getInt(startIndex);
 	}
 }

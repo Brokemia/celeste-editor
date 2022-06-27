@@ -348,13 +348,24 @@ public class BinaryPacker {
         Element element = new Element();
         short lookup = reader.readShort();
         element.Name = stringLookup[lookup];
+        //System.out.println(lookup);
         byte b = reader.readByte();
         if (b > 0) {
             element.Attributes = new HashMap<String, Object>();
         }
-        for (int i = 0; i < b; i++) {
+        Integer children = null;
+        for (int i = 0; i < b; i++) {		//D9 00 01 00 DA 00 01 00 20 00 01 00 21 00 01 00 00 00
         	lookup = reader.readShort();
+//        	if(lookup == 0) {
+//        		return element;
+//        	} else if(lookup < 6) {
+//        		children = (int) lookup;
+//        		break;
+//        	}
+        	//System.out.println(element.Name + " " + lookup);
+        	
             String key = stringLookup[lookup];
+            //System.out.print("\t" + key + "=");
             byte type = reader.readByte();
             Object value = null;
             switch (type) {
@@ -387,9 +398,18 @@ public class BinaryPacker {
                         break;
                     }
             }
+//            if(element.Name.equals("jumpThru") && key.equals("id") && value.equals(14627)) {
+//            	
+//        		System.out.println("found it");
+//        		for(int j = 0; j < 20; j++) {
+//        			System.out.printf("%02x", reader.readByte());
+//        		}
+//        		System.out.println();
+//        	}
+            //System.out.println(value);
             element.Attributes.put(key, value);
         }
-        short num = reader.readShort();
+        short num = children == null ? reader.readShort() : children.shortValue();
         if (num > 0) {
             element.Children = new ArrayList<Element>();
         }
