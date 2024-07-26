@@ -357,12 +357,16 @@ public class BinaryPacker {
         for (int i = 0; i < b; i++) {		//D9 00 01 00 DA 00 01 00 20 00 01 00 21 00 01 00 00 00
         	lookup = reader.readShort();
 //        	if(lookup == 0) {
+//        		System.out.println("Crash here!!!");
+//        		System.exit(0);
 //        		return element;
 //        	} else if(lookup < 6) {
+//        		System.out.println("Crash here!!!");
+//        		System.exit(0);
 //        		children = (int) lookup;
 //        		break;
 //        	}
-        	//System.out.println(element.Name + " " + lookup);
+//        	System.out.println(element.Name + " " + lookup);
         	
             String key = stringLookup[lookup];
             //System.out.print("\t" + key + "=");

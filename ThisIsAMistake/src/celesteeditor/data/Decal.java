@@ -73,7 +73,7 @@ public class Decal implements ElementEncoded {
 		float tempX = element.AttrFloat("x");
 		float tempY = element.AttrFloat("y");
 		if(((int) tempX) != tempX || ((int) tempY) != tempY) {
-			System.out.println(element.Name + ": Position isn't an integer (" + tempX + ", " + tempY + "). What the heck have you done?");
+			System.out.println(element.Attr("texture") + ": Position isn't an integer (" + tempX + ", " + tempY + "). What the heck have you done?");
 		}
 		
 		x = (int)tempX;

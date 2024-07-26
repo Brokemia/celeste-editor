@@ -160,6 +160,8 @@ public class Level implements ElementEncoded {
 				triggers = new ListLevelLayer(Entity.class).fromElement(c);
 				break;
 			case "fgtiles":
+				if(!c.Attr("innerText").equals(""))
+				System.out.println("fgtiles in " + name);
 				fgTiles = new IntTileLevelLayer().fromElement(c);
 				break;
 			case "fgdecals":
@@ -172,6 +174,8 @@ public class Level implements ElementEncoded {
 				entities = new ListLevelLayer(Entity.class).fromElement(c);
 				break;
 			case "bgtiles":
+				if(!c.Attr("innerText").equals(""))
+				System.out.println("bgtiles in " + name);
 				bgTiles = new IntTileLevelLayer().fromElement(c);
 				break;
 			case "bgdecals":
